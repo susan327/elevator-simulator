@@ -1,0 +1,40 @@
+class UIController {
+  constructor(app){this.app=app;this.bind();this.buildDynamicFloors();this.buildDesignControls();this.updateDesignValues();}
+  el(id){return document.getElementById(id);}
+  bind(){
+    this.el('callUp').onclick=()=>this.app.call('up');this.el('callDown').onclick=()=>this.app.call('down');this.el('enterBtn').onclick=()=>this.app.enter();this.el('exitBtn').onclick=()=>this.app.exit();this.el('openBtn').onclick=()=>this.app.openDoor();this.el('closeBtn').onclick=()=>this.app.closeDoor();this.el('jumpBtn').onclick=()=>this.app.jump(Number(this.el('floorSelect').value));this.el('resetBtn').onclick=()=>location.reload();
+    this.el('resetDesign').onclick=()=>this.app.resetDesign();
+    this.el('speedButtons').onclick=e=>{const b=e.target.closest('[data-speed]');if(!b)return;this.app.setSpeed(Number(b.dataset.speed));document.querySelectorAll('[data-speed]').forEach(x=>x.classList.toggle('active',x===b));};
+    document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>this.showTab(b.dataset.tab));
+    this.el('cabinPresets').onclick=e=>{const b=e.target.closest('[data-preset]');if(!b)return;this.app.config.applyCabinPreset(b.dataset.preset);this.updateDesignValues();this.app.scheduleDesignUpdate('geometry');};
+    this.el('motionPresets').onclick=e=>{const b=e.target.closest('[data-preset]');if(!b)return;this.app.config.applyMotionPreset(b.dataset.preset);this.updateDesignValues();this.app.scheduleDesignUpdate('motion');};
+    const service=this.el('servicePresets');if(service)service.onclick=e=>{const b=e.target.closest('[data-service]');if(!b)return;this.app.config.applyServicePreset(b.dataset.service);this.el('servedFloorsInput').value=this.app.config.floorService.expression;this.updateDesignValues();this.app.scheduleDesignUpdate('building');};
+    const input=this.el('servedFloorsInput');if(input)input.addEventListener('change',()=>{if(this.app.config.applyServiceExpression(input.value)){this.updateDesignValues();this.app.scheduleDesignUpdate('building');}else this.app.log('停止階設定を解釈できません');});
+  }
+  showTab(name){document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('active',b.dataset.tab===name));this.el('operateTab').hidden=name!=='operate';this.el('designTab').hidden=name!=='design';}
+  buildDynamicFloors(){
+    const select=this.el('floorSelect'),grid=this.el('floorButtons');select.innerHTML='';grid.innerHTML='';
+    for(let f=1;f<=this.app.config.floors;f++){const o=document.createElement('option');o.value=f;o.textContent=`${f}F${this.app.config.isServed(f)?'':'（通過）'}`;select.appendChild(o);}
+    const served=this.app.config.servedFloors.slice().reverse(),cols=served.length<=12?2:served.length<=24?3:served.length<=40?4:5;grid.style.gridTemplateColumns=`repeat(${cols},1fr)`;
+    for(const f of served){const b=document.createElement('button');b.textContent=f;b.dataset.floor=f;b.onclick=()=>this.app.selectFloor(f);grid.appendChild(b);}
+    const input=this.el('servedFloorsInput');if(input)input.value=this.app.config.floorService.expression;
+  }
+  buildDesignControls(){document.querySelectorAll('[data-key]').forEach(row=>{const key=row.dataset.key;const change=d=>{this.app.config.adjust(key,d);this.updateDesignValues();const kind=['maxSpeed','acceleration','deceleration','accelJerk','decelJerk','landingSpeed','landingDistance'].includes(key)?'motion':['floors','floorHeight'].includes(key)?'building':'geometry';this.app.scheduleDesignUpdate(kind);};row.querySelector('[data-minus]').onclick=()=>change(-1);row.querySelector('[data-plus]').onclick=()=>change(1);});}
+  format(key,v){if(key==='floors')return `${v}階`;if(['maxSpeed'].includes(key))return `${v.toFixed(2)} m/s`;if(['acceleration','deceleration'].includes(key))return `${v.toFixed(2)} m/s²`;if(['accelJerk','decelJerk'].includes(key))return `${v.toFixed(2)} m/s³`;if(key==='landingSpeed')return `${v.toFixed(3)} m/s`;if(key==='landingDistance')return `${v.toFixed(2)} m`;return `${v.toFixed(2)} m`;}
+  updateDesignValues(){
+    const c=this.app.config;document.querySelectorAll('[data-key]').forEach(row=>{const key=row.dataset.key;row.querySelector('[data-value]').textContent=this.format(key,c[key]);});
+    document.querySelectorAll('#servicePresets [data-service]').forEach(b=>b.classList.toggle('active',b.dataset.service===c.floorService.preset));
+    document.querySelectorAll('#cabinPresets [data-preset]').forEach(b=>b.classList.toggle('active',b.dataset.preset===c.cabinPreset));document.querySelectorAll('#motionPresets [data-preset]').forEach(b=>b.classList.toggle('active',b.dataset.preset===c.motionPreset));
+  }
+  updateValidation(){const r=this.app.config.validate(),el=this.el('validation');el.className='validation';if(!r.ok){el.classList.add('error');el.textContent='⚠ '+r.errors.join(' / ');}else if(r.warnings.length){el.classList.add('warn');el.textContent='△ '+r.warnings.join(' / ');}else el.textContent='設定値は正常です。';}
+  updatePerformance(){const el=this.el('perfText');if(el)el.textContent=`${this.app.displayFps || 0} fps / 目標30`; }
+  update(){
+    const a=this.app,e=a.elevator,rounded=Math.round(e.position),inside=a.inside,c=a.config;
+    this.el('playerFloor').textContent=inside?`${rounded}F（かご内）`:`${a.playerFloor}F`;this.el('carFloor').textContent=`${e.position.toFixed(2)}F`;
+    const labels={IDLE:'待機',ACCELERATING:'加速中',CRUISING:'定速運転',DECELERATING:'滑らかに減速中',LANDING:'着床進入中',ARRIVAL_WAIT:'停止・戸開待ち',DOOR:e.doors.isOpen()?'ドア全開':e.doors.target?'ドア開動作中':'ドア閉動作中'};this.el('stateText').textContent=labels[e.state]||e.state;
+    this.el('queueText').textContent=[e.target,...a.calls.queue.map(x=>x.floor)].filter(x=>x!=null).join(', ')||'なし';this.el('specText').textContent=`${c.capacity}人・${c.motionPresets[c.motionPreset]?.label||'カスタム'}・${c.floors}階／${c.servedFloors.length}停止`;
+    this.el('viewLabel').textContent=inside?`${rounded}F かご内視点`:`${a.playerFloor}F ホール視点`;this.el('carLabel').textContent=`かご ${e.position.toFixed(2)}F ×${a.clock.scale}`;this.el('indicator').textContent=`${rounded}F ${e.direction>0?'▲':e.direction<0?'▼':'■'}`;
+    this.el('hallControls').hidden=inside;this.el('cabinControls').hidden=!inside;const canEnter=a.canEnter(),enter=this.el('enterBtn');enter.disabled=!canEnter;enter.textContent=canEnter?'かごに乗る（乗車可能）':e.state==='ARRIVAL_WAIT'?'停止しました・ドア待ち':e.doors.target===1?'ドアが開いています…':'かごに乗る';this.el('exitBtn').disabled=!inside||!e.doors.isBoardable();const servedHere=c.isServed(a.playerFloor);this.el('callUp').disabled=!servedHere||a.playerFloor===c.floors;this.el('callDown').disabled=!servedHere||a.playerFloor===1;const hallTitle=this.el('hallServiceStatus');if(hallTitle)hallTitle.textContent=servedHere?'停止階・呼出可能':'通過階（呼出不可）';
+    document.querySelectorAll('#floorButtons button').forEach(b=>{const f=Number(b.dataset.floor);b.classList.toggle('active',e.target===f||a.calls.queue.some(x=>x.floor===f));});
+  }
+}
