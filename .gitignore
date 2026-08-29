@@ -1,0 +1,16 @@
+# Secrets and local environment settings
+.env
+.env.*
+!.env.example
+
+# Python virtual environments and caches
+.venv/
+venv/
+__pycache__/
+*.pyc
+
+# JavaScript dependencies
+node_modules/
+
+# Local tool review artifacts
+.codex-review/
