@@ -40,7 +40,7 @@ class ElevatorSystemConfig {
     if(this.doorHeight>this.carHeight-.05)errors.push('ドア高さは、かご内高さより0.05m以上低くしてください。');
     if(this.windowWidth>this.doorWidth/2-.08)errors.push('窓幅が片側ドア幅に収まりません。');
     if(this.windowHeight+this.windowTopMargin>this.doorHeight-.18)errors.push('窓高さと上端余白の組み合わせがドア内に収まりません。');
-    const doorPanelWidth=this.doorWidth+Math.max(.12,this.doorWidth*.14),frameSide=Math.max(.13,Math.min(.19,this.doorWidth*.16)),cols=this.servedFloors.length<=12?2:this.servedFloors.length<=24?3:this.servedFloors.length<=40?4:5,panelWidth=Math.min(.58,Math.max(.36,cols*.105+.12));
+    const doorPanelWidth=this.doorWidth+Math.max(.12,this.doorWidth*.14),frameSide=Math.max(.13,Math.min(.19,this.doorWidth*.16)),cols=ControlPanelLayout.forCount(this.servedFloors.length).columns,panelWidth=Math.min(.58,Math.max(.36,cols*.105+.12));
     if(this.carWidth<doorPanelWidth+frameSide*2+(panelWidth+.10)*2)errors.push('かご幅が、中央ドアの左右同幅と右側操作盤スペースを両立する必要幅に足りません。');
     if(this.floors<=8&&this.maxSpeed>=5)warnings.push('低層建物では超高速設定の効果がほとんど出ません。');
     if(this.floors>=30&&this.maxSpeed<=1)warnings.push('高層建物に低速設定のため、所要時間が長くなります。');
@@ -54,7 +54,7 @@ class ElevatorSystemConfig {
     const keys=['floors','floorHeight','carWidth','carDepth','carHeight','doorWidth','doorHeight','windowWidth','windowHeight','windowTopMargin','maxSpeed','acceleration','deceleration','accelJerk','decelJerk','landingSpeed','landingDistance'];
     for(const key of keys)if(Number.isFinite(Number(saved[key])))this.set(key,Number(saved[key]));
     if(Array.isArray(saved.servedFloors))this.applyServiceExpression(saved.servedFloors.join(','));
-    this.cabinPreset=this.cabinPresets[saved.cabinPreset]?saved.cabinPreset:'custom';this.motionPreset=this.motionPresets[saved.motionPreset]?saved.motionPreset:'custom';return this.validate().ok;
+    this.buildingPreset=saved.buildingPreset==='office30'&&this.floors===30&&this.floorHeight===3.6?'office30':'custom';this.cabinPreset=this.cabinPresets[saved.cabinPreset]?saved.cabinPreset:'custom';this.motionPreset=this.motionPresets[saved.motionPreset]?saved.motionPreset:'custom';return this.validate().ok;
   }
   isServed(floor){return this.floorService.isServed(Number(floor));}
   get servedFloors(){return this.floorService.servedNumbers;}

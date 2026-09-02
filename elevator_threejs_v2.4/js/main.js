@@ -1,7 +1,7 @@
 class ElevatorApp {
   constructor(){
     if(!window.THREE){document.getElementById('loading').textContent='Three.jsの読込に失敗しました。インターネット接続を確認してください。';return;}
-    this.playerFloor=1;this.inside=false;this.audio=new AudioManager();this.boardingCloseTimer=null;this.clock=new SimulationClock();this.config=new ElevatorSystemConfig();this.restoreDesignSettings();
+    this.playerFloor=1;this.inside=false;this.audio=new AudioManager();this.boardingCloseTimer=null;this.clock=new SimulationClock();this.config=new ElevatorSystemConfig();this.settingsStore=new DesignSettingsStore();this.restoreDesignSettings();
     this.sceneManager=new SceneManager(document.getElementById('viewport'));this.raycaster=new THREE.Raycaster();this.pointer=new THREE.Vector2();this.createSimulation();this.ui=new UIController(this);this.bind3DInput();document.addEventListener('pointerdown',()=>this.audio.unlock(),{capture:true});
     this.designTimer=null;this.lastRender=0;this.frameInterval=1000/30;this.fpsFrames=0;this.fpsTime=performance.now();this.displayFps=0;this.lastVisualSignature='';
     document.getElementById('loading').remove();this.log('v2.4起動。運行ロジック・着床・自動閉扉改善版');requestAnimationFrame(t=>this.loop(t));
@@ -11,8 +11,8 @@ class ElevatorApp {
     this.car=new ElevatorCar(this.sceneManager.scene,this.building,this.geometryConfig);this.doors=new DoorController(this.car,this.building);this.calls=new CallController(this.config.floorService);
     this.elevator=new ElevatorController(this.car,this.doors,this.calls,this.building,t=>this.log(t),this.config,this.audio);this.camera=new CameraController(this.sceneManager,this.building,this.car);this.camera.setHall(1);
   }
-  restoreDesignSettings(){try{const saved=JSON.parse(localStorage.getItem('elevator-design-v2')||'null');if(saved&&!this.config.restore(saved))this.config.reset();}catch{this.config.reset();}}
-  saveDesignSettings(){try{localStorage.setItem('elevator-design-v2',JSON.stringify(this.config.snapshot()));}catch{} }
+  restoreDesignSettings(){const saved=this.settingsStore.load();if(!saved)return;if(saved.useOffice30)this.config.applyBuildingPreset('office30');else if(!this.config.restore(saved.data))this.config.reset();if(saved.migrated)this.saveDesignSettings();}
+  saveDesignSettings(){this.settingsStore.save(this.config.snapshot());}
   bind3DInput(){
     const viewport=document.getElementById('viewport');
     viewport.addEventListener('pointerdown',event=>{

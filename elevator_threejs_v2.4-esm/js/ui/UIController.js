@@ -1,3 +1,5 @@
+import { ControlPanelLayout } from '../elevator/ControlPanelLayout.js';
+
 export class UIController {
   constructor(app){this.app=app;this.bind();this.buildDynamicFloors();this.buildDesignControls();this.updateDesignValues();this.setPreview(localStorage.getItem('elevator-preview-mode')||'auto');}
   el(id){return document.getElementById(id);}
@@ -25,7 +27,7 @@ export class UIController {
   buildDynamicFloors(){
     const select=this.el('floorSelect'),grid=this.el('floorButtons'),portraitGrid=this.el('portraitFloorButtons');select.innerHTML='';grid.innerHTML='';portraitGrid.innerHTML='';
     for(let f=1;f<=this.app.config.floors;f++){const o=document.createElement('option');o.value=f;o.textContent=`${f}F${this.app.config.isServed(f)?'':'（通過）'}`;select.appendChild(o);}
-    const served=this.app.config.servedFloors.slice().reverse(),count=served.length,cols=count<=4?1:count<=12?2:count<=24?3:count<=40?4:5,density=count<=12?'roomy':count<=30?'normal':'compact';grid.style.gridTemplateColumns=`repeat(${cols},1fr)`;portraitGrid.style.gridTemplateColumns=`repeat(${cols},1fr)`;grid.dataset.density=density;portraitGrid.dataset.density=density;
+    const served=this.app.config.servedFloors.slice().reverse(),layout=ControlPanelLayout.forCount(served.length),cols=layout.columns,density=layout.density;grid.style.gridTemplateColumns=`repeat(${cols},1fr)`;portraitGrid.style.gridTemplateColumns=`repeat(${cols},1fr)`;grid.dataset.density=density;portraitGrid.dataset.density=density;
     for(const f of served){const b=document.createElement('button');b.textContent=f;b.dataset.floor=f;b.onclick=()=>this.app.selectFloor(f);grid.appendChild(b);const mobileButton=b.cloneNode(true);mobileButton.onclick=()=>{this.app.selectFloor(f);this.setPortraitSheet(false);};portraitGrid.appendChild(mobileButton);}
     const input=this.el('servedFloorsInput');if(input)input.value=this.app.config.floorService.expression;
   }

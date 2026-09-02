@@ -43,7 +43,7 @@ class ElevatorCar {
   makeControlPanel(w,h,d){
     const c=this.config,served=this.building.floorService?.servedNumbers||Array.from({length:this.building.floors},(_,i)=>i+1);
     this.interactiveObjects=[];this.carButtons=new Map();
-    const count=served.length,cols=c.controlPanelColumns,rows=Math.ceil(count/cols);
+    const layout=ControlPanelLayout.forCount(served.length),cols=layout.columns,rows=layout.rows;
     const panelW=c.controlPanelWidth,maxPanelH=Math.min(1.92,h-.28),availableH=Math.min(maxPanelH,Math.max(.70,.43+rows*.145));
     const usableButtonH=availableH-.43,stepY=rows>1?usableButtonH/(rows-1):0,cellW=(panelW-.09)/cols;
     const buttonSize=Math.max(.040,Math.min(.078,cellW*.64,rows>1?stepY*.58:.078));
