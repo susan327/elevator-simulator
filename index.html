@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Three.jsで動作するレスポンシブ対応の3Dエレベーターシミュレーター">
+  <title>Elevator Simulator</title>
+  <style>
+    :root{color-scheme:dark;--bg:#07101a;--panel:#101c29;--line:#31475d;--text:#eff7ff;--muted:#9eb1c5;--accent:#67d7ff;--gold:#ffd46c}*{box-sizing:border-box}html,body{margin:0;min-height:100%;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--bg);color:var(--text)}body{min-height:100vh;display:grid;place-items:center;overflow-x:hidden;background:radial-gradient(circle at 50% 0,#17364c 0,#0b1824 30%,#060b12 72%)}main{width:min(920px,calc(100% - 28px));padding:48px 0}.hero{text-align:center;margin-bottom:34px}.mark{display:grid;place-items:center;width:74px;height:74px;margin:0 auto 18px;border:1px solid #52718c;border-radius:22px;background:linear-gradient(145deg,#1c3346,#0b151f);box-shadow:0 18px 60px #0008;color:var(--gold);font-size:34px}h1{margin:0;font-size:clamp(34px,8vw,70px);line-height:1;letter-spacing:-.035em}.subtitle{margin:14px auto 0;color:var(--muted);font-size:clamp(14px,2.5vw,18px);line-height:1.7}.version{display:inline-block;margin-top:15px;padding:6px 11px;border:1px solid #3a5870;border-radius:999px;color:var(--accent);font-size:12px}.cards{display:grid;grid-template-columns:1.4fr 1fr;gap:14px}.card{display:flex;flex-direction:column;min-height:245px;padding:24px;border:1px solid var(--line);border-radius:20px;background:linear-gradient(145deg,#142536e8,#0c151fe8);box-shadow:0 20px 60px #0006}.card.primary{border-color:#3f7893;background:linear-gradient(145deg,#18394c,#0c1b28)}h2{margin:0 0 10px;font-size:22px}.card p{margin:0;color:var(--muted);line-height:1.7}.features{display:flex;flex-wrap:wrap;gap:7px;margin:18px 0 22px}.features span{padding:5px 8px;border:1px solid #334a5f;border-radius:7px;background:#08131e;color:#bcd0e2;font-size:11px}.button{display:block;margin-top:auto;padding:13px 16px;border:1px solid #5d778e;border-radius:11px;background:#172737;color:var(--text);font-weight:800;text-align:center;text-decoration:none;transition:transform .15s,border-color .15s,background .15s}.button:hover{transform:translateY(-2px);border-color:var(--accent);background:#1b4053}.primary .button{border-color:#6bd9ff;background:#1d6580}.note{margin:22px 0 0;text-align:center;color:#74899d;font-size:12px}@media(max-width:700px){main{padding:30px 0}.cards{grid-template-columns:1fr}.card{min-height:220px;padding:20px}}
+  </style>
+</head>
+<body>
+  <main>
+    <header class="hero"><div class="mark">↕</div><h1>Elevator Simulator</h1><p class="subtitle">速度・寸法・停止階を設計し、乗場とかご内の両視点から体験できる<br>Three.js 3Dエレベーターシミュレーター</p><span class="version">Version 2.4</span></header>
+    <div class="cards">
+      <section class="card primary"><h2>3Dシミュレーター</h2><p>ドア操作、呼び登録、方向優先運転、滑らかな加減速と着床をブラウザで体験できます。</p><div class="features"><span>PC</span><span>タブレット</span><span>スマホ縦</span><span>モーター音</span><span>レスポンシブ</span></div><a class="button" href="./elevator_threejs_v2.4/index.html">シミュレーターを起動</a></section>
+      <section class="card"><h2>Motor Sound Generator</h2><p>基本波形や速度クラスを調整し、運転状態へ連動するモーター音をJSONで設計できます。</p><div class="features"><span>Web Audio</span><span>JSON</span><span>リアルタイム試聴</span></div><a class="button" href="./motor-sound-generator.html">音を設計する</a></section>
+    </div>
+    <p class="note">For development and simulation use.</p>
+  </main>
+</body>
+</html>
