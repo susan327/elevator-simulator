@@ -16,6 +16,17 @@ URL：<http://127.0.0.1:5173/>
 
 `npm install`は初回、または`package.json`・`package-lock.json`が変わったときに実行します。通常の起動では`npm run dev`だけで構いません。
 
+## モーター音ジェネレーター
+
+```powershell
+cd "C:\Users\user\Desktop\アプリ\01_現役\エレベーター\elevator_threejs_v2.4-esm"
+npm exec vite -- .. --host 127.0.0.1 --port 5180
+```
+
+URL：<http://127.0.0.1:5180/motor-sound-generator.html>
+
+プロジェクト直下の`motor-sound-preset.json`と同じ形式のJSONを貼り付けて試聴できます。
+
 ## 公開用ビルドの確認：v2.4 ESM版
 
 ```powershell

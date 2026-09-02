@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>エレベーター・モーター音ジェネレーター</title>
+  <style>
+    :root{color-scheme:dark;--bg:#080d13;--card:#111923;--line:#34465a;--text:#edf5ff;--muted:#9eafc2;--accent:#62d4ff;--ok:#80dfa0}*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(circle at 20% 0,#183044,#080d13 48%);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",sans-serif}.app{width:min(1100px,calc(100% - 24px));margin:auto;padding:24px 0 40px}header{display:flex;align-items:end;justify-content:space-between;gap:16px;margin-bottom:18px}h1{margin:0;font-size:clamp(22px,4vw,36px)}header p{margin:6px 0 0;color:var(--muted)}.badge{padding:7px 10px;border:1px solid #42627a;border-radius:999px;color:var(--accent);white-space:nowrap}.grid{display:grid;grid-template-columns:minmax(280px,.8fr) minmax(360px,1.2fr);gap:14px}.card{background:#111923e8;border:1px solid var(--line);border-radius:16px;padding:16px;box-shadow:0 16px 50px #0005}h2{font-size:15px;margin:0 0 13px;color:#c9ddf2}.meter{height:12px;border:1px solid #41546a;border-radius:999px;background:#070b10;overflow:hidden}.meter>i{display:block;width:0;height:100%;background:linear-gradient(90deg,#42bde9,#80dfa0,#ffd46b);transition:width .06s linear}.readout{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:10px 0 14px}.readout div{padding:9px;border-radius:10px;background:#0a1119;color:var(--muted);font-size:12px}.readout strong{display:block;margin-top:3px;color:var(--text);font-size:16px}.controls{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.controls button,.preset-row button{border:1px solid #516a82;border-radius:9px;background:#172333;color:var(--text);padding:10px;cursor:pointer}.controls button:hover,.preset-row button:hover{border-color:var(--accent)}button.primary{background:#1d627c;border-color:#67d5ff;font-weight:800}button.stop{border-color:#855159;color:#ffc5c9}.preset-row{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-bottom:12px}.slider{display:grid;grid-template-columns:120px 1fr 62px;gap:9px;align-items:center;margin:10px 0;color:var(--muted);font-size:13px}.slider output{text-align:right;color:var(--text);font-variant-numeric:tabular-nums}input[type=range]{width:100%;accent-color:var(--accent)}textarea{width:100%;min-height:455px;resize:vertical;border:1px solid #40536a;border-radius:10px;background:#080d13;color:#cce8ff;padding:12px;font:12px/1.5 ui-monospace,Consolas,monospace}.json-actions{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:9px}.json-actions button{border:1px solid #516a82;border-radius:8px;background:#172333;color:var(--text);padding:9px;cursor:pointer}.message{min-height:22px;margin:9px 0 0;color:var(--ok);font-size:12px}.hint{color:var(--muted);font-size:12px;line-height:1.55;margin-top:12px}@media(max-width:800px){header{align-items:start;flex-direction:column}.grid{grid-template-columns:1fr}.slider{grid-template-columns:105px 1fr 55px}textarea{min-height:360px}}
+    .slider select{width:100%;min-width:0;border:1px solid #516a82;border-radius:8px;background:#0b131c;color:var(--text);padding:8px}
+    .speed-class-row{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:8px 0 12px}.speed-class-row button{border:1px solid #516a82;border-radius:8px;background:#172333;color:var(--text);padding:8px 3px;font-size:12px;cursor:pointer}.speed-class-row button.active{background:#1d627c;border-color:var(--accent)}
+  </style>
+</head>
+<body>
+<main class="app">
+  <header><div><h1>Motor Sound Generator</h1><p>速度と加減速に追従するインバーター・モーター音をWeb Audioで合成</p></div><span class="badge">JSON schema v1</span></header>
+  <div class="grid">
+    <div>
+      <section class="card">
+        <h2>試聴</h2><div class="meter"><i id="meterBar"></i></div>
+        <div class="readout"><div>状態<strong id="phase">停止</strong></div><div>速度<strong id="speed">0%</strong></div><div>周波数<strong id="frequency">0 Hz</strong></div></div>
+        <div class="controls"><button id="cycle" class="primary">運転サイクルを再生</button><button id="stop" class="stop">停止</button><button data-preview="accel">加速</button><button data-preview="cruise">定速</button><button data-preview="decel">減速</button><button data-preview="landing">着床</button></div>
+      </section>
+      <section class="card">
+        <h2>音色プリセット</h2><div class="preset-row"><button data-preset="rope">ロープ式</button><button data-preset="machineRoom">機械室あり</button><button data-preset="quiet">静音型</button></div>
+        <span>速度クラス別の聞こえ方</span><div class="speed-class-row"><button data-speed-class="low">低速</button><button data-speed-class="medium">中速</button><button data-speed-class="high" class="active">高速</button><button data-speed-class="ultra">超高速</button></div>
+        <label class="slider">基本波形<select id="waveform"><option value="sine">サイン波</option><option value="triangle">三角波</option><option value="sawtooth">ノコギリ波</option><option value="square">矩形波</option><option value="sineTriangle">サイン＋三角</option><option value="sineSaw">サイン＋ノコギリ</option></select><output id="waveformLabel"></output></label>
+        <label class="slider">全体音量<input id="masterGain" type="range" min="0" max="0.35" step="0.005"><output></output></label>
+        <label class="slider">基音<input id="baseFrequency" type="range" min="20" max="120" step="1"><output></output></label>
+        <label class="slider">速度連動幅<input id="frequencyRange" type="range" min="0" max="250" step="1"><output></output></label>
+        <label class="slider">インバーター<input id="inverterGain" type="range" min="0" max="0.12" step="0.002"><output></output></label>
+        <label class="slider">機械振動<input id="mechanicalGain" type="range" min="0" max="0.15" step="0.002"><output></output></label>
+        <label class="slider">走行ノイズ<input id="noiseGain" type="range" min="0" max="0.10" step="0.002"><output></output></label>
+      </section>
+    </div>
+    <section class="card"><h2>採用するJSON</h2><textarea id="json" spellcheck="false"></textarea><div class="json-actions"><button id="apply" class="primary">JSONを適用</button><button id="copy">コピー</button><button id="download">保存</button></div><p id="message" class="message"></p><p class="hint">ここへ同じ形式のJSONを貼れば、その場で音へ反映できるよ。「保存」で本体採用用の <code>motor-sound-preset.json</code> を書き出せる。</p></section>
+  </div>
+</main>
+<script src="./motor-sound-generator.js" defer></script>
+</body>
+</html>

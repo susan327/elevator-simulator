@@ -10,6 +10,8 @@ class MotionPlanner {
     this.landingDistance=Math.max(.05,c.landingDistance??.4);
     this.maxLandingTime=Math.max(.8,c.maxLandingTime??3.2);
     this.maxLandingDeceleration=Math.max(.1,c.maxLandingDeceleration??.32);
+    this.maxLandingJerk=Math.max(.1,c.maxLandingJerk??.38);
+    this.minLandingTime=Math.max(.6,c.minLandingTime??1.2);
   }
   smooth(u){u=THREE.MathUtils.clamp(u,0,1);return 10*u**3-15*u**4+6*u**5;}
   smoothDerivative(u){u=THREE.MathUtils.clamp(u,0,1);return 30*u*u*(1-u)*(1-u);}
@@ -28,9 +30,11 @@ class MotionPlanner {
   create(distanceMeters){
     const D=Math.max(0,distanceMeters);
     const dLanding=Math.min(this.landingDistance,D*.35);
-    // quintic減速の最大減速度を全プリセットで揃え、停止直前の衝撃感を抑える。
-    const comfortTime=dLanding>0?Math.sqrt(3.75*dLanding/this.maxLandingDeceleration):0;
-    const landingTime=Math.min(this.maxLandingTime,comfortTime);
+    // 着床は速度だけで決めず、最大減速度と最大ジャークの両方を満たす時間を使う。
+    // quintic速度曲線は区間の両端で加速度・ジャークが0になり、停止時の「ドスン」を防げる。
+    const byLandingAccel=dLanding>0?Math.sqrt(3.75*dLanding/this.maxLandingDeceleration):0;
+    const byLandingJerk=dLanding>0?Math.cbrt(11.55*dLanding/this.maxLandingJerk):0;
+    const landingTime=dLanding>0?Math.min(this.maxLandingTime,Math.max(this.minLandingTime,byLandingAccel,byLandingJerk)):0;
     const landingSpeed=Math.min(this.maxSpeed,Math.max(this.landingSpeed,landingTime>0?2*dLanding/landingTime:0));
     let peak=this.maxSpeed;
     let parts=this.distancesFor(peak);

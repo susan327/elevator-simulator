@@ -1,0 +1,39 @@
+{
+  "schema": "elevator-motor-sound/v1",
+  "name": "標準ロープ式インバーター",
+  "masterGain": 0.115,
+  "motor": {
+    "baseFrequency": 74,
+    "frequencyRange": 51,
+    "speedExponent": 0.9,
+    "attack": 0.18,
+    "release": 0.55,
+    "harmonics": [
+      { "type": "sine", "ratio": 1, "gain": 1 }
+    ]
+  },
+  "inverter": {
+    "enabled": true,
+    "baseFrequency": 95,
+    "frequencyRange": 520,
+    "gain": 0.008
+  },
+  "mechanical": {
+    "frequency": 31,
+    "gain": 0.15
+  },
+  "ambience": {
+    "noiseGain": 0.1,
+    "lowpass": 850
+  },
+  "direction": {
+    "upPitch": 1.035,
+    "downPitch": 0.965
+  },
+  "speedClasses": {
+    "low": { "gainScale": 0.72, "pitchScale": 0.86 },
+    "medium": { "gainScale": 0.86, "pitchScale": 0.94 },
+    "high": { "gainScale": 1.08, "pitchScale": 1.06 },
+    "ultra": { "gainScale": 1.18, "pitchScale": 1.12 }
+  }
+}
