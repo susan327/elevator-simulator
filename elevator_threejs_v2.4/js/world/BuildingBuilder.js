@@ -30,20 +30,19 @@ class BuildingBuilder {
     leaf.userData.openX=side==='left'?-c.pocketCenterX:c.pocketCenterX;
     leaf.position.set(leaf.userData.closedX,0,z);parent.add(leaf);return leaf;
   }
+  floorProfile(f){
+    const names=['','MAIN ENTRANCE','VISITOR RECEPTION','SALES','CUSTOMER SUCCESS','HUMAN RESOURCES','CONFERENCE CENTER','FINANCE','LEGAL','GENERAL AFFAIRS','TRAINING CENTER','SKY LOBBY','ENGINEERING','PRODUCT DESIGN','QUALITY LAB','IT OPERATIONS','SECURITY CENTER','DATA & AI','RESEARCH & DEVELOPMENT','MARKETING','PROJECT HUB','SKY LOBBY','GLOBAL BUSINESS','CORPORATE STRATEGY','CONSULTING','INNOVATION LAB','EXECUTIVE SUPPORT','BOARD OFFICE','EXECUTIVE OFFICE','PRESIDENT OFFICE','OBSERVATION LOUNGE'];
+    let type='office',zone=f<=10?'LOW-RISE OFFICE':f<=20?'MID-RISE OFFICE':'HIGH-RISE OFFICE';
+    if(f===1)type='lobby';else if(f===11||f===21)type='lounge';else if(f===6||f===10||f===16||f===20||f===25)type='meeting';else if(f===30)type='observation';else if(f>=27)type='executive';
+    const palette=f===1?{wall:0xe1d5c4,floor:0xc9bca9,ceiling:0xf1eadf,trim:0x806f5c,accent:0x8b7257}:f===11?{wall:0xcbd8d8,floor:0xaebbbb,ceiling:0xe6eeee,trim:0x66797d,accent:0x58747c}:f===21?{wall:0xc7d0dc,floor:0xa7b0bd,ceiling:0xe3e8ef,trim:0x606c80,accent:0x536785}:f===30?{wall:0xb8cad5,floor:0x8e9fab,ceiling:0xdce8ed,trim:0x536978,accent:0x49677d}:f>=27?{wall:0xd2c8d2,floor:0xaaa0aa,ceiling:0xe9e2e9,trim:0x736979,accent:0x655a70}:f>=22?{wall:0xcbd3d6,floor:0xadb6ba,ceiling:0xe6ebed,trim:0x65747b,accent:0x536b78}:f>=12?{wall:0xd2d4cf,floor:0xb5b7b1,ceiling:0xe9ebe6,trim:0x707874,accent:0x65716f}:{wall:0xd9d2c8,floor:0xbdb4a8,ceiling:0xeee9e1,trim:0x7b7063,accent:0x6d7b80};
+    return {type,zone,name:names[f]||`${f}F OFFICE`,...palette};
+  }
   buildFloorScenery(lobby,f,lobbyH){
-    const backZ=9.95;
-    let type='office',zone='LOW-RISE OFFICE',accent=0x6d7b80;
-    if(f===1){type='lobby';zone='MAIN ENTRANCE';accent=0x8b7257;}
-    else if(f===11||f===21){type='lounge';zone='SKY LOBBY';accent=f===11?0x58747c:0x536785;}
-    else if(f===6||f===16){type='meeting';zone=f===16?'SECURITY & CONFERENCE':'CONFERENCE CENTER';accent=f===16?0x4d5f71:0x64727a;}
-    else if(f===30){type='observation';zone='OBSERVATION LOUNGE';accent=0x49677d;}
-    else if(f>=27){type='executive';zone='EXECUTIVE OFFICE';accent=0x655a70;}
-    else if(f>=22){zone='HIGH-RISE OFFICE';accent=0x536b78;}
-    else if(f>=12){zone='MID-RISE OFFICE';accent=0x65716f;}
+    const backZ=9.95,{type,zone,name,accent}=this.floorProfile(f);
 
     this.box(10.8,2.55,.10,accent,0,1.42,backZ-.18,{roughness:.88},lobby);
     this.box(3.1,.38,.08,0x12171d,0,2.75,backZ-.10,{roughness:.75},lobby);
-    this.sign(`${f}F  ${zone}`,3.0,.34,lobby,0,2.75,backZ-.045,'#111820','#f0d994');
+    this.sign(`${f}F  ${name}`,3.0,.34,lobby,0,2.75,backZ-.045,'#111820','#f0d994');
 
     if(type==='lobby'){
       this.box(3.8,.85,.90,0x71533d,0,.43,7.8,{roughness:.72},lobby);
@@ -66,7 +65,9 @@ class BuildingBuilder {
       for(let x=-4.5;x<=4.5;x+=1.5)this.box(1.22,2.2,.05,0x7fb3ca,x,1.35,backZ-.12,{transparent:true,opacity:.34,roughness:.08,metalness:.02},lobby);
       this.box(4.0,.55,.85,0x40566a,0,.28,7.9,{roughness:.78},lobby);
     }else{
-      for(let x=-4;x<=4;x+=2){this.box(1.35,.72,.72,0x5e6871,x,.36,7.8,{roughness:.82},lobby);this.box(.08,1.15,.75,0xaeb8bd,x,.92,8.2,{roughness:.88},lobby);}
+      const deskColor=[0x59656e,0x67625d,0x53636a][f%3],partitionColor=[0xa9b5ba,0xb9b0a5,0x9fadb0][f%3];
+      for(let x=-4;x<=4;x+=2){this.box(1.35,.72,.72,deskColor,x,.36,7.8,{roughness:.82},lobby);this.box(.08,1.15,.75,partitionColor,x,.92,8.2,{roughness:.88},lobby);}
+      if(f%2===0)this.box(2.3,.08,.62,accent,2.8,1.18,9.25,{roughness:.72},lobby);else this.box(2.3,.08,.62,accent,-2.8,1.18,9.25,{roughness:.72},lobby);
     }
     lobby.userData.floorVisualType=type;lobby.userData.floorZone=zone;
   }
@@ -77,8 +78,8 @@ class BuildingBuilder {
     for(let f=1;f<=this.floors;f++)this.buildFloor(f);
   }
   buildFloor(f){
-    const y=this.floorY(f),c=this.geometryConfig,lobby=new THREE.Group();lobby.position.y=y;this.group.add(lobby);this.floorGroups[f]=lobby;const wall=0xd5cabc,trim=0x75695c,openingW=c.frameOuterWidth,openingH=c.frameOuterHeight,lobbyH=this.floorHeight,doorX=c.doorCenterX;
-    this.box(13.5,.22,8.8,0xb9afa2,0,-.11,5.85,{roughness:.92},lobby);this.box(13.5,.22,8.8,0xe8e0d5,0,lobbyH-.11,5.85,{roughness:.96},lobby);this.box(13.5,lobbyH,.24,wall,0,lobbyH/2,10.2,{roughness:.94},lobby);
+    const y=this.floorY(f),c=this.geometryConfig,lobby=new THREE.Group(),profile=this.floorProfile(f);lobby.position.y=y;this.group.add(lobby);this.floorGroups[f]=lobby;const {wall,trim}=profile,openingW=c.frameOuterWidth,openingH=c.frameOuterHeight,lobbyH=this.floorHeight,doorX=c.doorCenterX;
+    this.box(13.5,.22,8.8,profile.floor,0,-.11,5.85,{roughness:.92},lobby);this.box(13.5,.22,8.8,profile.ceiling,0,lobbyH-.11,5.85,{roughness:.96},lobby);this.box(13.5,lobbyH,.24,wall,0,lobbyH/2,10.2,{roughness:.94},lobby);
     const facadeHalf=6.75,leftSideW=doorX-openingW/2+facadeHalf,rightSideW=facadeHalf-(doorX+openingW/2);this.box(leftSideW,lobbyH,.18,wall,-facadeHalf+leftSideW/2,lobbyH/2,1.48,{roughness:.92},lobby);this.box(rightSideW,lobbyH,.18,wall,facadeHalf-rightSideW/2,lobbyH/2,1.48,{roughness:.92},lobby);this.box(openingW,Math.max(.15,lobbyH-openingH),.18,wall,doorX,openingH+(lobbyH-openingH)/2,1.48,{roughness:.92},lobby);
     this.box(c.frameSide,openingH,.22,trim,doorX-openingW/2+c.frameSide/2,openingH/2,1.59,{roughness:.55,metalness:.14},lobby);this.box(c.frameSide,openingH,.22,trim,doorX+openingW/2-c.frameSide/2,openingH/2,1.59,{roughness:.55,metalness:.14},lobby);this.box(openingW,c.frameTop,.22,trim,doorX,openingH-c.frameTop/2,1.59,{roughness:.55,metalness:.14},lobby);this.box(openingW-.08,.10,.28,0x454442,doorX,.03,1.54,{roughness:.75,metalness:.12},lobby);
     for(let gx=-5.4;gx<=5.4;gx+=1.35)this.box(.025,.018,8.2,0x8d857b,gx,.015,5.9,{roughness:1},lobby);for(let gz=2.0;gz<=9.6;gz+=1.25)this.box(12.8,.018,.025,0x8d857b,0,.017,gz,{roughness:1},lobby);
