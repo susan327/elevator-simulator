@@ -2,7 +2,7 @@ class ToneSynth {
   constructor(config){this.config=config;this.context=null;this.noteMap={C:0,'C#':1,Db:1,D:2,'D#':3,Eb:3,E:4,F:5,'F#':6,Gb:6,G:7,'G#':8,Ab:8,A:9,'A#':10,Bb:10,B:11};}
   ensure(){
     if(!this.context){const Ctx=window.AudioContext||window.webkitAudioContext;if(!Ctx)return null;this.context=new Ctx();}
-    if(this.context.state==='suspended')this.context.resume();return this.context;
+    if(this.context.state!=='running')this.context.resume().catch(()=>{});return this.context;
   }
   unlock(){this.ensure();}
   frequency(note,cents=0){const m=this.config.master,midi=12*(m.octave+1)+this.noteMap[note];return 440*Math.pow(2,(midi-69+(m.pitchCents+cents)/100)/12);}
