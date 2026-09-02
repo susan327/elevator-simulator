@@ -6,8 +6,14 @@ class MotorSoundSynth {
   update(velocity,acceleration,direction,motionPreset,maxSpeed,audible){if(!this.master)return;const c=this.c,now=this.context.currentTime,absoluteSpeed=Math.abs(velocity);if(direction)this.lastDirection=Math.sign(direction);const normalized=Math.max(0,Math.min(1,absoluteSpeed/Math.max(.1,maxSpeed||1))),tuning=c.speedClasses[motionPreset]||c.speedClasses.medium,pitch=(this.lastDirection>=0?c.direction.upPitch:c.direction.downPitch)*tuning.pitchScale,frequency=(c.motor.baseFrequency+c.motor.frequencyRange*normalized**c.motor.speedExponent)*pitch;for(const {osc,h} of this.oscillators)osc.frequency.setTargetAtTime(frequency*h.ratio,now,.030);if(this.inverter)this.inverter.frequency.setTargetAtTime((c.inverter.baseFrequency+c.inverter.frequencyRange*(.18+.82*normalized))*pitch,now,.025);this.mechanical.frequency.setTargetAtTime(c.mechanical.frequency*tuning.pitchScale*(1+normalized*.16),now,.045);const speedEnvelope=Math.pow(normalized,.8),accelBody=1+Math.min(.10,Math.abs(acceleration)*.07),level=audible?c.masterGain*tuning.gainScale*speedEnvelope*accelBody:0,timeConstant=!audible?.025:absoluteSpeed<.003?.10:acceleration>=0?.055:.075;this.master.gain.setTargetAtTime(level,now,timeConstant);}
 }
 class AudioManager {
-  constructor(){this.config=new ElevatorSoundConfig();this.synth=new ToneSynth(this.config);this.motor=new MotorSoundSynth();}
-  unlock(){this.synth.unlock();this.motor.unlock();}
+  constructor(){this.config=new ElevatorSoundConfig();this.synth=new ToneSynth(this.config);this.motor=new MotorSoundSynth();this.context=null;}
+  unlock(){
+    const Ctx=window.AudioContext||window.webkitAudioContext;if(!Ctx)return Promise.resolve(false);
+    if(!this.context)this.context=new Ctx();
+    this.synth.context=this.context;this.motor.context=this.context;
+    this.synth.ensure();this.motor.ensure();
+    return this.context.state==='suspended'?this.context.resume().then(()=>true).catch(()=>false):Promise.resolve(true);
+  }
   playCall(){this.synth.playCall();}
   playArrival(direction){if(direction!==0)this.synth.playArrival(direction);}
   updateMotor(velocity,acceleration,direction,motionPreset,maxSpeed,audible){this.motor.update(velocity,acceleration,direction,motionPreset,maxSpeed,audible);}
