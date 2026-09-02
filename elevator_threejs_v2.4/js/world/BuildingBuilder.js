@@ -7,6 +7,9 @@ class BuildingBuilder {
     const canvas=document.createElement('canvas');canvas.width=256;canvas.height=256;const ctx=canvas.getContext('2d');ctx.clearRect(0,0,256,256);ctx.fillStyle=color;ctx.textAlign='center';ctx.textBaseline='middle';ctx.font='700 150px sans-serif';ctx.fillText(String(text),128,132);
     const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;texture.minFilter=THREE.LinearFilter;const mesh=new THREE.Mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshBasicMaterial({map:texture,transparent:true,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-2}));mesh.position.set(x,y,z);parent.add(mesh);return mesh;
   }
+  sign(text,w,h,parent,x,y,z,background='#17212a',foreground='#e8f2fa'){
+    const canvas=document.createElement('canvas');canvas.width=768;canvas.height=192;const ctx=canvas.getContext('2d');ctx.fillStyle=background;ctx.fillRect(0,0,768,192);ctx.strokeStyle='#71869a';ctx.lineWidth=8;ctx.strokeRect(7,7,754,178);ctx.fillStyle=foreground;ctx.textAlign='center';ctx.textBaseline='middle';ctx.font='700 58px sans-serif';ctx.fillText(text,384,100);const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;texture.minFilter=THREE.LinearFilter;const mesh=new THREE.Mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshBasicMaterial({map:texture}));mesh.position.set(x,y,z);parent.add(mesh);return mesh;
+  }
   makeTravelIndicator(parent,x,y,z,w=1.30,h=.26){const canvas=document.createElement('canvas');canvas.width=512;canvas.height=128;const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;texture.minFilter=THREE.LinearFilter;const mesh=new THREE.Mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshBasicMaterial({map:texture,transparent:true,depthWrite:false}));mesh.position.set(x,y,z);mesh.userData={canvas,texture,text:''};parent.add(mesh);this.drawTravelIndicator(mesh,1,0);return mesh;}
   drawTravelIndicator(mesh,floor,direction){const text=`${direction>0?'▲':direction<0?'▼':'■'}  ${Math.max(1,Math.min(this.floors,Math.round(floor)))}F`;if(mesh.userData.text===text)return;mesh.userData.text=text;const ctx=mesh.userData.canvas.getContext('2d');ctx.clearRect(0,0,512,128);ctx.fillStyle='#ffd468';ctx.textAlign='center';ctx.textBaseline='middle';ctx.font='700 72px sans-serif';ctx.fillText(text,256,66);mesh.userData.texture.needsUpdate=true;}
   setTravelIndicator(floor,direction){for(const indicator of this.hallIndicators)if(indicator)this.drawTravelIndicator(indicator,floor,direction);}
@@ -29,17 +32,18 @@ class BuildingBuilder {
   }
   buildFloorScenery(lobby,f,lobbyH){
     const backZ=9.95;
-    let type='office';
-    const accent=0x53636b;
-    if(f===1)type='lobby';
-    else if(f===this.floors)type='observation';
-    else if(f>=Math.max(2,this.floors-2))type='executive';
-    else if(f%10===6)type='cafe';
-    else if(f%10===1)type='lounge';
-    else if(f%5===0)type='meeting';
+    let type='office',zone='LOW-RISE OFFICE',accent=0x6d7b80;
+    if(f===1){type='lobby';zone='MAIN ENTRANCE';accent=0x8b7257;}
+    else if(f===11||f===21){type='lounge';zone='SKY LOBBY';accent=f===11?0x58747c:0x536785;}
+    else if(f===6||f===16){type='meeting';zone=f===16?'SECURITY & CONFERENCE':'CONFERENCE CENTER';accent=f===16?0x4d5f71:0x64727a;}
+    else if(f===30){type='observation';zone='OBSERVATION LOUNGE';accent=0x49677d;}
+    else if(f>=27){type='executive';zone='EXECUTIVE OFFICE';accent=0x655a70;}
+    else if(f>=22){zone='HIGH-RISE OFFICE';accent=0x536b78;}
+    else if(f>=12){zone='MID-RISE OFFICE';accent=0x65716f;}
 
     this.box(10.8,2.55,.10,accent,0,1.42,backZ-.18,{roughness:.88},lobby);
     this.box(3.1,.38,.08,0x12171d,0,2.75,backZ-.10,{roughness:.75},lobby);
+    this.sign(`${f}F  ${zone}`,3.0,.34,lobby,0,2.75,backZ-.045,'#111820','#f0d994');
 
     if(type==='lobby'){
       this.box(3.8,.85,.90,0x71533d,0,.43,7.8,{roughness:.72},lobby);
@@ -64,7 +68,7 @@ class BuildingBuilder {
     }else{
       for(let x=-4;x<=4;x+=2){this.box(1.35,.72,.72,0x5e6871,x,.36,7.8,{roughness:.82},lobby);this.box(.08,1.15,.75,0xaeb8bd,x,.92,8.2,{roughness:.88},lobby);}
     }
-    lobby.userData.floorVisualType=type;
+    lobby.userData.floorVisualType=type;lobby.userData.floorZone=zone;
   }
   build(){
     const total=this.floorHeight*this.floors,c=this.geometryConfig,shaftW=Math.max(3.0,c.carWidth+.95),shaftD=Math.max(2.6,c.carDepth+.85),half=shaftW/2;

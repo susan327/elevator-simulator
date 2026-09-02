@@ -2,6 +2,7 @@ export class UIController {
   constructor(app){this.app=app;this.bind();this.buildDynamicFloors();this.buildDesignControls();this.updateDesignValues();this.setPreview(localStorage.getItem('elevator-preview-mode')||'auto');}
   el(id){return document.getElementById(id);}
   bind(){
+    const officePreset=this.el('officeBuildingPreset');if(officePreset)officePreset.onclick=()=>{if(this.app.inside||this.app.elevator.state!=='IDLE'){this.app.log('建物プリセットは、かごの外で待機中に変更できます');return;}this.app.config.applyBuildingPreset('office30');this.updateDesignValues();this.app.scheduleDesignUpdate('building');this.app.log('30Fオフィスビル設定を適用');};
     this.el('panelToggle').onclick=()=>this.setPanel(!document.body.classList.contains('panel-open'));this.el('panelClose').onclick=()=>this.setPanel(false);this.el('panelBackdrop').onclick=()=>this.setPanel(false);
     this.el('portraitFloorToggle').onclick=()=>this.setPortraitSheet(this.el('portraitFloorSheet').hidden);this.el('portraitFloorClose').onclick=()=>this.setPortraitSheet(false);this.el('portraitOpenBtn').onclick=()=>this.app.openDoor();this.el('portraitCloseBtn').onclick=()=>this.app.closeDoor();
     document.querySelector('.preview-grid').onclick=e=>{const b=e.target.closest('[data-preview]');if(b)this.setPreview(b.dataset.preview);};
