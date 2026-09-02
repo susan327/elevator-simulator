@@ -18,7 +18,7 @@ class ElevatorGeometryConfig {
   get frameOuterWidth(){return this.doorPanelTotalWidth+this.frameSide*2;}
   get frameOuterHeight(){return this.doorHeight+this.frameTop;}
   get openingWithPockets(){return this.frameOuterWidth+this.pocketWidth*2;}
-  get controlPanelColumns(){const count=this.system.servedFloors?.length??this.system.floors;return count<=12?2:count<=24?3:count<=40?4:5;}
+  get controlPanelColumns(){const count=this.system.servedFloors?.length??this.system.floors;return count<=4?1:count<=12?2:count<=24?3:count<=40?4:5;}
   get controlPanelWidth(){return Math.min(.58,Math.max(.36,this.controlPanelColumns*.105+.12));}
   get controlPanelSideWidth(){return this.controlPanelWidth+.10;}
   get doorCenterX(){return 0;}

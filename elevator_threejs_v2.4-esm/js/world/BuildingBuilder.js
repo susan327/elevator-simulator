@@ -45,24 +45,31 @@ export class BuildingBuilder {
     this.box(10.8,2.55,.10,accent,0,1.42,backZ-.18,{roughness:.88},lobby);
     this.box(3.1,.38,.08,0x12171d,0,2.75,backZ-.10,{roughness:.75},lobby);
     this.sign(`${f}F  ${name}`,3.0,.34,lobby,0,2.75,backZ-.045,'#111820','#f0d994');
+    this.box(.12,2.55,5.2,accent,-5.45,1.42,7.35,{roughness:.86},lobby);this.box(.12,2.55,5.2,accent,5.45,1.42,7.35,{roughness:.86},lobby);
+    this.box(1.05,2.18,.10,0x30383f,-4.15,1.09,9.70,{metalness:.18,roughness:.48},lobby);this.box(1.05,2.18,.10,0x30383f,4.15,1.09,9.70,{metalness:.18,roughness:.48},lobby);
+    this.box(.18,.04,4.8,0xf4e2bd,-3.15,lobbyH-.25,7.15,{emissive:0x8a5c25,emissiveIntensity:1.15},lobby);this.box(.18,.04,4.8,0xf4e2bd,3.15,lobbyH-.25,7.15,{emissive:0x8a5c25,emissiveIntensity:1.15},lobby);
 
     if(type==='lobby'){
       this.box(3.8,.85,.90,0x71533d,0,.43,7.8,{roughness:.72},lobby);
       this.box(1.0,1.35,.55,0x304d2e,-4.0,.68,7.7,{roughness:.85},lobby);
       this.box(1.0,1.35,.55,0x304d2e,4.0,.68,7.7,{roughness:.85},lobby);
+      this.box(2.2,.08,.70,0xc9dce2,-3.5,1.48,9.54,{transparent:true,opacity:.28,roughness:.08},lobby);this.box(2.2,.08,.70,0xc9dce2,3.5,1.48,9.54,{transparent:true,opacity:.28,roughness:.08},lobby);
     }else if(type==='meeting'){
       this.box(4.6,.12,1.45,0x76644f,0,.78,7.8,{roughness:.72},lobby);
       for(let x=-1.8;x<=1.8;x+=1.2){this.box(.52,.70,.52,0x39434d,x,.35,6.85,{roughness:.7},lobby);this.box(.52,.70,.52,0x39434d,x,.35,8.75,{roughness:.7},lobby);}
+      this.box(2.5,1.20,.06,0x172534,0,1.55,9.61,{emissive:0x183a58,emissiveIntensity:.42,roughness:.18},lobby);this.box(4.8,2.15,.045,0xa7c5ce,0,1.38,9.50,{transparent:true,opacity:.18,roughness:.08},lobby);
     }else if(type==='lounge'){
       this.box(2.7,.72,.95,0x596a50,-2.3,.36,7.9,{roughness:.82},lobby);
       this.box(2.7,.72,.95,0x596a50,2.3,.36,7.9,{roughness:.82},lobby);
       this.box(1.4,.25,.75,0x755d43,0,.25,7.5,{roughness:.75},lobby);
+      for(let x=-4.2;x<=4.2;x+=1.4)this.box(1.16,2.05,.045,0x75a8be,x,1.42,9.54,{transparent:true,opacity:.32,roughness:.06},lobby);
     }else if(type==='cafe'){
       for(let x=-3;x<=3;x+=2){this.box(.78,.10,.78,0x76533c,x,.75,7.8,{roughness:.68},lobby);this.box(.12,.72,.12,0x3a342e,x,.36,7.8,{metalness:.2,roughness:.5},lobby);}
       this.box(4.6,.95,.72,0x5e4534,0,.48,9.0,{roughness:.72},lobby);
     }else if(type==='executive'){
       this.box(3.2,.82,1.05,0x4d4252,2.4,.42,7.9,{roughness:.78},lobby);
       this.box(2.0,.62,.90,0x544735,-2.5,.31,8.0,{roughness:.72},lobby);
+      this.box(4.6,1.55,.08,0x4b382c,0,1.35,9.55,{roughness:.58},lobby);this.box(1.2,.72,.08,0xd7bd86,0,1.48,9.49,{metalness:.12,roughness:.4},lobby);
     }else if(type==='observation'){
       for(let x=-4.5;x<=4.5;x+=1.5)this.box(1.22,2.2,.05,0x7fb3ca,x,1.35,backZ-.12,{transparent:true,opacity:.34,roughness:.08,metalness:.02},lobby);
       this.box(4.0,.55,.85,0x40566a,0,.28,7.9,{roughness:.78},lobby);
@@ -70,6 +77,8 @@ export class BuildingBuilder {
       const deskColor=[0x59656e,0x67625d,0x53636a][f%3],partitionColor=[0xa9b5ba,0xb9b0a5,0x9fadb0][f%3];
       for(let x=-4;x<=4;x+=2){this.box(1.35,.72,.72,deskColor,x,.36,7.8,{roughness:.82},lobby);this.box(.08,1.15,.75,partitionColor,x,.92,8.2,{roughness:.88},lobby);}
       if(f%2===0)this.box(2.3,.08,.62,accent,2.8,1.18,9.25,{roughness:.72},lobby);else this.box(2.3,.08,.62,accent,-2.8,1.18,9.25,{roughness:.72},lobby);
+      this.box(2.0,1.65,.045,0xa9c5cc,-3.15,1.42,9.52,{transparent:true,opacity:.20,roughness:.07},lobby);this.box(2.0,1.65,.045,0xa9c5cc,3.15,1.42,9.52,{transparent:true,opacity:.20,roughness:.07},lobby);
+      for(let x=-4;x<=4;x+=2)this.box(.48,.30,.035,0x18242e,x,1.05,7.39,{emissive:0x17364a,emissiveIntensity:.35,roughness:.25},lobby);
     }
     lobby.userData.floorVisualType=type;lobby.userData.floorZone=zone;
   }
