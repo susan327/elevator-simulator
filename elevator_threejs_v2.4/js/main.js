@@ -84,3 +84,4 @@ class ElevatorApp {
   }
 }
 addEventListener('DOMContentLoaded',()=>window.elevatorApp=new ElevatorApp());
+if('serviceWorker'in navigator)addEventListener('load',()=>navigator.serviceWorker.register('../service-worker.js'));

@@ -2,12 +2,15 @@
 <html lang="ja">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#07101a">
+  <link rel="manifest" href="./manifest.webmanifest">
   <title>エレベーター・モーター音ジェネレーター</title>
   <style>
     :root{color-scheme:dark;--bg:#080d13;--card:#111923;--line:#34465a;--text:#edf5ff;--muted:#9eafc2;--accent:#62d4ff;--ok:#80dfa0}*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(circle at 20% 0,#183044,#080d13 48%);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",sans-serif}.app{width:min(1100px,calc(100% - 24px));margin:auto;padding:24px 0 40px}header{display:flex;align-items:end;justify-content:space-between;gap:16px;margin-bottom:18px}h1{margin:0;font-size:clamp(22px,4vw,36px)}header p{margin:6px 0 0;color:var(--muted)}.badge{padding:7px 10px;border:1px solid #42627a;border-radius:999px;color:var(--accent);white-space:nowrap}.grid{display:grid;grid-template-columns:minmax(280px,.8fr) minmax(360px,1.2fr);gap:14px}.card{background:#111923e8;border:1px solid var(--line);border-radius:16px;padding:16px;box-shadow:0 16px 50px #0005}h2{font-size:15px;margin:0 0 13px;color:#c9ddf2}.meter{height:12px;border:1px solid #41546a;border-radius:999px;background:#070b10;overflow:hidden}.meter>i{display:block;width:0;height:100%;background:linear-gradient(90deg,#42bde9,#80dfa0,#ffd46b);transition:width .06s linear}.readout{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:10px 0 14px}.readout div{padding:9px;border-radius:10px;background:#0a1119;color:var(--muted);font-size:12px}.readout strong{display:block;margin-top:3px;color:var(--text);font-size:16px}.controls{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.controls button,.preset-row button{border:1px solid #516a82;border-radius:9px;background:#172333;color:var(--text);padding:10px;cursor:pointer}.controls button:hover,.preset-row button:hover{border-color:var(--accent)}button.primary{background:#1d627c;border-color:#67d5ff;font-weight:800}button.stop{border-color:#855159;color:#ffc5c9}.preset-row{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-bottom:12px}.slider{display:grid;grid-template-columns:120px 1fr 62px;gap:9px;align-items:center;margin:10px 0;color:var(--muted);font-size:13px}.slider output{text-align:right;color:var(--text);font-variant-numeric:tabular-nums}input[type=range]{width:100%;accent-color:var(--accent)}textarea{width:100%;min-height:455px;resize:vertical;border:1px solid #40536a;border-radius:10px;background:#080d13;color:#cce8ff;padding:12px;font:12px/1.5 ui-monospace,Consolas,monospace}.json-actions{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:9px}.json-actions button{border:1px solid #516a82;border-radius:8px;background:#172333;color:var(--text);padding:9px;cursor:pointer}.message{min-height:22px;margin:9px 0 0;color:var(--ok);font-size:12px}.hint{color:var(--muted);font-size:12px;line-height:1.55;margin-top:12px}@media(max-width:800px){header{align-items:start;flex-direction:column}.grid{grid-template-columns:1fr}.slider{grid-template-columns:105px 1fr 55px}textarea{min-height:360px}}
     .slider select{width:100%;min-width:0;border:1px solid #516a82;border-radius:8px;background:#0b131c;color:var(--text);padding:8px}
     .speed-class-row{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:8px 0 12px}.speed-class-row button{border:1px solid #516a82;border-radius:8px;background:#172333;color:var(--text);padding:8px 3px;font-size:12px;cursor:pointer}.speed-class-row button.active{background:#1d627c;border-color:var(--accent)}
+    body{min-height:100dvh;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
   </style>
 </head>
 <body>
@@ -36,5 +39,6 @@
   </div>
 </main>
 <script src="./motor-sound-generator.js" defer></script>
+<script>if('serviceWorker'in navigator)addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js'));</script>
 </body>
 </html>
