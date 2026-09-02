@@ -10,6 +10,8 @@ export class MotionPlanner {
     this.decelJerk=Math.max(.05,c.decelJerk??.5);
     this.landingSpeed=Math.max(.005,c.landingSpeed??.03);
     this.landingDistance=Math.max(.05,c.landingDistance??.4);
+    this.maxLandingTime=Math.max(.8,c.maxLandingTime??3.2);
+    this.maxLandingDeceleration=Math.max(.1,c.maxLandingDeceleration??.32);
   }
   smooth(u){u=THREE.MathUtils.clamp(u,0,1);return 10*u**3-15*u**4+6*u**5;}
   smoothDerivative(u){u=THREE.MathUtils.clamp(u,0,1);return 30*u*u*(1-u)*(1-u);}
@@ -27,7 +29,11 @@ export class MotionPlanner {
   }
   create(distanceMeters){
     const D=Math.max(0,distanceMeters);
-    const dLanding=Math.min(this.landingDistance,D*.35),landingSpeed=Math.min(this.landingSpeed,Math.max(.005,D));
+    const dLanding=Math.min(this.landingDistance,D*.35);
+    // quintic減速の最大減速度を全プリセットで揃え、停止直前の衝撃感を抑える。
+    const comfortTime=dLanding>0?Math.sqrt(3.75*dLanding/this.maxLandingDeceleration):0;
+    const landingTime=Math.min(this.maxLandingTime,comfortTime);
+    const landingSpeed=Math.min(this.maxSpeed,Math.max(this.landingSpeed,landingTime>0?2*dLanding/landingTime:0));
     let peak=this.maxSpeed;
     let parts=this.distancesFor(peak);
     const mainDistance=Math.max(0,D-dLanding);

@@ -3,7 +3,7 @@ class ElevatorApp {
     if(!window.THREE){document.getElementById('loading').textContent='Three.jsの読込に失敗しました。インターネット接続を確認してください。';return;}
     this.playerFloor=1;this.inside=false;this.audio=new AudioManager();this.boardingCloseTimer=null;this.clock=new SimulationClock();this.config=new ElevatorSystemConfig();
     this.sceneManager=new SceneManager(document.getElementById('viewport'));this.raycaster=new THREE.Raycaster();this.pointer=new THREE.Vector2();this.createSimulation();this.ui=new UIController(this);this.bind3DInput();
-    this.designTimer=null;this.lastRender=0;this.frameInterval=1000/30;this.fpsFrames=0;this.fpsTime=performance.now();this.displayFps=0;
+    this.designTimer=null;this.lastRender=0;this.frameInterval=1000/30;this.fpsFrames=0;this.fpsTime=performance.now();this.displayFps=0;this.lastVisualSignature='';
     document.getElementById('loading').remove();this.log('v2.4起動。運行ロジック・着床・自動閉扉改善版');requestAnimationFrame(t=>this.loop(t));
   }
   createSimulation(){
@@ -30,8 +30,8 @@ class ElevatorApp {
   }
   sync3DButtonLights(){
     const activeFloors=new Set([this.elevator.target,...this.calls.queue.map(x=>x.floor)].filter(x=>x!=null));
-    for(const f of this.config.servedFloors)this.car.setCarCallLight(f,activeFloors.has(f));
-    for(let f=1;f<=this.config.floors;f++){this.building.setHallCallLight(f,'up',this.calls.queue.some(x=>x.floor===f&&x.direction==='up'));this.building.setHallCallLight(f,'down',this.calls.queue.some(x=>x.floor===f&&x.direction==='down'));}
+    if(this.inside)for(const f of this.config.servedFloors)this.car.setCarCallLight(f,activeFloors.has(f));
+    else{const f=this.playerFloor;this.building.setHallCallLight(f,'up',this.calls.queue.some(x=>x.floor===f&&x.direction==='up'));this.building.setHallCallLight(f,'down',this.calls.queue.some(x=>x.floor===f&&x.direction==='down'));}
   }
   destroySimulation(){if(this.car){this.car.disposeObject(this.car.group);this.sceneManager.scene.remove(this.car.group);}if(this.building)this.building.dispose();}
   log(text){const el=document.getElementById('log'),time=new Date().toLocaleTimeString('ja-JP',{hour12:false});const lines=(`[${time}] ${text}\n`+el.textContent).split('\n').slice(0,40);el.textContent=lines.join('\n');}
@@ -51,7 +51,7 @@ class ElevatorApp {
   }
   rebuildFromDesign(){
     const result=this.config.validate();if(!result.ok)return;
-    this.inside=false;this.boardingCloseTimer=null;this.playerFloor=1;this.destroySimulation();this.createSimulation();this.ui.buildDynamicFloors();this.ui.updateDesignValues();this.ui.updateValidation();
+    this.inside=false;this.boardingCloseTimer=null;this.playerFloor=1;this.destroySimulation();this.createSimulation();this.lastVisualSignature='';this.ui.buildDynamicFloors();this.ui.updateDesignValues();this.ui.updateValidation();
     this.log(`リアルタイム再生成：${this.config.floors}階・${this.config.capacity}人・最高${this.config.maxSpeed.toFixed(2)}m/s`);
   }
   resetDesign(){this.config.reset();this.ui.updateDesignValues();this.ui.updateValidation();this.scheduleDesignUpdate('building');}
@@ -61,8 +61,10 @@ class ElevatorApp {
     const elapsed=now-this.lastRender;this.lastRender=now-(elapsed%this.frameInterval);
     const dt=this.clock.tick(now);
     const steps=Math.max(1,Math.min(12,Math.ceil(dt.sim/(1/60))));const step=dt.sim/steps;for(let i=0;i<steps;i++)this.elevator.update(step);
-    this.camera.update();this.sync3DButtonLights();this.ui.update();this.sceneManager.render(this.camera.camera);
-    this.fpsFrames++;if(now-this.fpsTime>=1000){this.displayFps=Math.round(this.fpsFrames*1000/(now-this.fpsTime));this.fpsFrames=0;this.fpsTime=now;this.ui.updatePerformance();}
+    this.camera.update();this.sync3DButtonLights();this.ui.update();
+    const visualSignature=`${this.elevator.position.toFixed(4)}|${this.doors.progress.toFixed(4)}|${this.camera.mode}|${this.camera.floor}|${this.inside}|${this.elevator.target}|${this.calls.queue.map(x=>`${x.floor}:${x.direction}`).join(',')}`;
+    if(this.sceneManager.needsRender||visualSignature!==this.lastVisualSignature){this.sceneManager.render(this.camera.camera);this.lastVisualSignature=visualSignature;this.fpsFrames++;}
+    if(now-this.fpsTime>=1000){this.displayFps=Math.round(this.fpsFrames*1000/(now-this.fpsTime));this.fpsFrames=0;this.fpsTime=now;this.ui.updatePerformance();}
   }
 }
 addEventListener('DOMContentLoaded',()=>window.elevatorApp=new ElevatorApp());

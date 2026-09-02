@@ -25,9 +25,8 @@ class ElevatorCar {
     this.mesh(visibleWindowWidth,doorH-windowTop,.10,0x3b3f44,0,windowTop+(doorH-windowTop)/2,0,metal,leaf);
     this.mesh(visibleWindowWidth,.065,.10,0x3b3f44,0,windowBottom+.032,0,metal,leaf);
     this.mesh(visibleWindowWidth,.065,.10,0x3b3f44,0,windowTop-.032,0,metal,leaf);
-    const glass=this.mesh(Math.max(.06,visibleWindowWidth-.025),Math.max(.12,windowTop-windowBottom-.095),.028,0xb8c5ca,0,(windowBottom+windowTop)/2,-.055,
+    this.mesh(Math.max(.06,visibleWindowWidth-.025),Math.max(.12,windowTop-windowBottom-.095),.028,0xb8c5ca,0,(windowBottom+windowTop)/2,-.055,
       {transparent:true,opacity:.20,roughness:.08,metalness:.02,side:THREE.DoubleSide},leaf);
-    glass.material=new THREE.MeshPhysicalMaterial({color:0xb8c5ca,transparent:true,opacity:.20,roughness:.08,metalness:.02,transmission:.10,side:THREE.DoubleSide});
     leaf.userData.closedX=side==='left'?-width/2:width/2;
     // 全開時は扉の中心を戸袋中心へ合わせ、外側へ突き抜けないようにする。
     leaf.userData.openX=side==='left'?-c.pocketCenterX:c.pocketCenterX;
