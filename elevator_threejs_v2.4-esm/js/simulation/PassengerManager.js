@@ -7,13 +7,14 @@ export class PassengerManager {
   countIn(id){return this.riders.get(id)?.size||0;}
   reservedFor(id){return this.passengers.filter(p=>p.assignedId===id&&p.state==='approaching').length;}
   isFull(id){return this.countIn(id)>=this.config.capacity;}
+  routeLeg(origin,finalDestination){const direct=['A','B'].find(id=>this.config.isServed(origin,id)&&this.config.isServed(finalDestination,id));if(direct)return {destination:finalDestination,preferredId:direct};const common=this.config.servedFloorsFor('A').filter(f=>this.config.isServed(f,'B')),transfer=common.sort((a,b)=>Math.abs(a-origin)+Math.abs(a-finalDestination)-(Math.abs(b-origin)+Math.abs(b-finalDestination)))[0];return transfer?{destination:transfer,preferredId:['A','B'].find(id=>this.config.isServed(origin,id)&&this.config.isServed(transfer,id))}:null;}
   chooseTrip(pattern){const floors=this.building.floorService.servedNumbers;if(floors.length<2)return null;let origin,destination;const pick=items=>items[Math.floor(Math.random()*items.length)];if(pattern==='morning'&&Math.random()<.75){origin=floors[0];destination=pick(floors.slice(1));}else if(pattern==='evening'&&Math.random()<.75){origin=pick(floors.slice(1));destination=floors[0];}else{origin=pick(floors);destination=pick(floors.filter(f=>f!==origin));}return {origin,destination};}
   spawn(pattern){
     const trip=this.chooseTrip(pattern);if(!trip||this.waitingAt(trip.origin)>=this.config.maxWaitingPerFloor)return false;
-    const direction=trip.destination>trip.origin?'up':'down',isNew=!this.dispatch.hasActiveCall(trip.origin,direction);
-    const assignedId=this.dispatch.assign(trip.origin,direction);if(isNew)this.onNewHallCall({floor:trip.origin,direction,source:'passenger'});
-    const passenger={id:this.nextId++,...trip,direction,assignedId,state:'waiting',elapsed:0};this.passengers.push(passenger);
-    this.renderer.create(passenger);this.layoutWaiting(trip.origin);this.log(`乗客${passenger.id}：${trip.origin}F→${trip.destination}F（共通待機列・${assignedId}号機応答予定）`);return true;
+    const leg=this.routeLeg(trip.origin,trip.destination);if(!leg)return false;const direction=leg.destination>trip.origin?'up':'down',isNew=!this.dispatch.hasActiveCall(trip.origin,direction);
+    const assignedId=this.dispatch.assign(trip.origin,direction,{requiredFloor:leg.destination});if(!assignedId)return false;if(isNew)this.onNewHallCall({floor:trip.origin,direction,source:'passenger'});
+    const passenger={id:this.nextId++,...trip,finalDestination:trip.destination,destination:leg.destination,direction,assignedId,state:'waiting',elapsed:0};this.passengers.push(passenger);
+    this.renderer.create(passenger);this.layoutWaiting(trip.origin);this.log(`乗客${passenger.id}：${trip.origin}F→${passenger.finalDestination}F${leg.destination!==passenger.finalDestination?`（15F乗換）`:''}（共通待機列・${assignedId}号機応答予定）`);return true;
   }
   layoutWaiting(floor){this.renderer.layoutWaiting(this.passengers.filter(p=>p.origin===floor&&p.state==='waiting'));}
   exitingAt(unit,floor){return this.passengers.some(p=>p.assignedId===unit.id&&p.state==='exiting'&&p.destination===floor);}
@@ -52,7 +53,7 @@ export class PassengerManager {
         if(p.elapsed>=1.05){p.state='riding';p.elapsed=0;this.renderer.board(p,unit,this.riders.get(unit.id));unit.controller.request(p.destination,'car',{closeDoors:false});unit.controller.extendDoorHold(1.5);this.log(`乗客${p.id}：${unit.id}号機へ乗車（${this.countIn(unit.id)}/${this.config.capacity}人）・${p.destination}Fを登録`);}
       }else if(p.state==='exiting'){
         p.elapsed+=dt;this.renderer.updateTransition(p,Math.min(1,p.elapsed/1.45));
-        if(p.elapsed>=1.45){this.renderer.remove(p);this.passengers.splice(this.passengers.indexOf(p),1);this.log(`乗客${p.id}：${p.destination}Fへ歩いて降車（${unit.id}号機 ${this.countIn(unit.id)}/${this.config.capacity}人）`);}
+        if(p.elapsed>=1.45){if(p.destination!==p.finalDestination){const transfer=p.destination,leg=this.routeLeg(transfer,p.finalDestination);p.origin=transfer;p.destination=leg.destination;p.direction=p.destination>transfer?'up':'down';p.state='waiting';p.elapsed=0;const isNew=!this.dispatch.hasActiveCall(transfer,p.direction);p.assignedId=this.dispatch.assign(transfer,p.direction,{requiredFloor:p.destination});this.renderer.returnToQueue(p);this.layoutWaiting(transfer);if(isNew)this.onNewHallCall({floor:transfer,direction:p.direction,source:'transfer'});this.log(`乗客${p.id}：${transfer}Fで${p.assignedId}号機へ乗り換え待ち`);}else{this.renderer.remove(p);this.passengers.splice(this.passengers.indexOf(p),1);this.log(`乗客${p.id}：${p.destination}Fへ歩いて降車（${unit.id}号機 ${this.countIn(unit.id)}/${this.config.capacity}人）`);}}
       }
     }
   }

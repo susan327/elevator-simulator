@@ -47,7 +47,7 @@ export class ElevatorCar {
     leaf.position.set(leaf.userData.closedX,0,c.cabinDoorZ);this.group.add(leaf);return leaf;
   }
   makeControlPanel(w,h,d){
-    const c=this.config,served=this.building.floorService?.servedNumbers||Array.from({length:this.building.floors},(_,i)=>i+1);
+    const c=this.config,served=c.system?.servedFloorsFor?.(this.id)||this.building.floorService?.servedNumbers||Array.from({length:this.building.floors},(_,i)=>i+1);
     this.interactiveObjects=[];this.carButtons=new Map();
     const layout=ControlPanelLayout.forCount(served.length),cols=layout.columns,rows=layout.rows;
     const panelW=layout.panelWidth,availableH=Math.min(h-.64,layout.panelHeight),gridSpan=Math.max(0,availableH-.59),stepY=rows>1?gridSpan/(rows-1):0,cellW=(panelW-.06)/cols;

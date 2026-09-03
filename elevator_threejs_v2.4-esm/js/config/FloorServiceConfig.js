@@ -1,6 +1,6 @@
 export class FloorServiceConfig {
-  constructor(floorCount=20,floorHeight=3.6){
-    this.floorCount=floorCount;this.floorHeight=floorHeight;this.preset='all';this.customExpression='';this.rebuild();
+  constructor(floorCount=20,floorHeight=3.6,{requireTerminals=true}={}){
+    this.floorCount=floorCount;this.floorHeight=floorHeight;this.requireTerminals=requireTerminals;this.preset='all';this.customExpression='';this.rebuild();
   }
   rebuild(){
     const oldServed=new Set((this.floors||[]).filter(x=>x.served).map(x=>x.number));
@@ -13,7 +13,7 @@ export class FloorServiceConfig {
   }
   updateBuilding(floorCount,floorHeight){this.floorCount=floorCount;this.floorHeight=floorHeight;this.rebuild();this.applyPreset(this.preset,true);}
   typeFor(n){if(n===1)return'lobby';if(n===this.floorCount)return'observation';if(n>=Math.max(2,this.floorCount-2))return'executive';if(n%10===6)return'cafe';if(n%10===1)return'lounge';if(n%5===0)return'meeting';return'office';}
-  ensureTerminals(){if(!this.floors.length)return;this.floors[0].served=true;this.floors[this.floors.length-1].served=true;}
+  ensureTerminals(){if(!this.requireTerminals||!this.floors.length)return;this.floors[0].served=true;this.floors[this.floors.length-1].served=true;}
   applyPreset(key,silent=false){
     this.lastError='';
     this.preset=key;
@@ -35,7 +35,7 @@ export class FloorServiceConfig {
       if(range){let a=Number(range[1]),b=Number(range[2]);if(a<1||b<1||a>this.floorCount||b>this.floorCount){invalid.push(token);return;}if(a>b)[a,b]=[b,a];for(let n=a;n<=b;n++)set.add(n);}
       else{const n=Number(token);if(Number.isInteger(n)&&n>=1&&n<=this.floorCount)set.add(n);else invalid.push(token);}
     });
-    if(!invalid.length){set.add(1);set.add(this.floorCount);}
+    if(!invalid.length&&this.requireTerminals){set.add(1);set.add(this.floorCount);}
     return {floors:[...set].sort((a,b)=>a-b),invalid};
   }
   parseExpression(text){return this.parseExpressionDetailed(text).floors;}

@@ -62,6 +62,13 @@ export class BuildingBuilder {
       this.box(1.0,1.35,.55,0x304d2e,-4.0,.68,7.7,{roughness:.85},lobby);
       this.box(1.0,1.35,.55,0x304d2e,4.0,.68,7.7,{roughness:.85},lobby);
       this.box(2.2,.08,.70,0xc9dce2,-3.5,1.48,9.54,{transparent:true,opacity:.28,roughness:.08},lobby);this.box(2.2,.08,.70,0xc9dce2,3.5,1.48,9.54,{transparent:true,opacity:.28,roughness:.08},lobby);
+    }else if(type==='clinic'){
+      this.box(4.8,.92,.68,0xe7eeeb,0,.46,8.85,{roughness:.78},lobby);this.box(3.8,.08,.58,0x79a69e,0,.94,8.72,{roughness:.55},lobby);
+      for(const x of [-3.8,-2.55,2.55,3.8]){this.box(.82,.48,.64,0x789b95,x,.24,7.65,{roughness:.82},lobby);this.box(.82,.72,.10,0x91b2ac,x,.60,7.94,{roughness:.82},lobby);}
+      this.sign('RECEPTION  /  EXAMINATION',4.2,.38,lobby,0,1.70,9.58,'#e8f2ef','#315b55');
+    }else if(type==='hotel'){
+      for(const x of [-4.2,-2.1,0,2.1,4.2]){this.box(1.55,2.18,.12,0x6e5948,x,1.10,9.58,{roughness:.62},lobby);this.box(.07,.07,.04,0xd6b56e,x+.48,1.05,9.49,{metalness:.65,roughness:.2},lobby);}
+      this.box(8.8,.10,.78,0x8d7964,0,.08,8.25,{roughness:.88},lobby);
     }else if(type==='meeting'){
       this.box(4.6,.12,1.45,0x76644f,0,.78,7.8,{roughness:.72},lobby);
       for(let x=-1.8;x<=1.8;x+=1.2){this.box(.52,.70,.52,0x39434d,x,.35,6.85,{roughness:.7},lobby);this.box(.52,.70,.52,0x39434d,x,.35,8.75,{roughness:.7},lobby);}
@@ -118,7 +125,7 @@ export class BuildingBuilder {
     face.userData.interaction={type,floor,direction,label};face.userData.buttonGroup=group;face.userData.baseEmissive=0x17242c;this.interactiveObjects.push(face);return face;
   }
   buildHallPanel(lobby,f,panelX,elevatorId){
-    if(this.floorService&&!this.floorService.isServed(f)){this.hallButtons[elevatorId][f]=null;return;}
+    if(this.geometryConfig?.system&&!this.geometryConfig.system.isServed(f,elevatorId)){this.hallButtons[elevatorId][f]=null;return;}
     const dirs=[];if(f<this.floors)dirs.push('up');if(f>1)dirs.push('down');
     const panelH=dirs.length===2?.82:.50;this.box(.34,panelH,.12,0x15181c,panelX,1.25,1.60,{metalness:.55,roughness:.24},lobby);
     const data={};dirs.forEach((dir,i)=>{const y=dirs.length===2?1.43-i*.34:1.25;data[dir]=this.makeInteractiveButton(lobby,{x:panelX,y,z:1.69,label:dir==='up'?'▲':'▼',type:'hallCall',floor:f,direction:dir,size:.14});data[dir].userData.interaction.elevatorId=elevatorId;});

@@ -31,7 +31,7 @@ class ElevatorApp {
   }
   shouldPlayArrival(id,floor){return this.inside?this.bank?.activeId===id:Math.round(this.playerFloor)===Math.round(floor);}
   playPassengerHallCall({floor}){if(this.inside||Math.round(this.playerFloor)!==Math.round(floor))return false;this.audio.unlock();this.audio.playCall();return true;}
-  syncActiveUnit(unit){this.bank.setActive(unit.id);this.car=unit.car;this.doors=unit.doors;this.calls=unit.calls;this.elevator=unit.controller;if(this.camera)this.camera.car=this.car;}
+  syncActiveUnit(unit){const changed=this.bank.activeId!==unit.id;this.bank.setActive(unit.id);this.car=unit.car;this.doors=unit.doors;this.calls=unit.calls;this.elevator=unit.controller;if(this.camera)this.camera.car=this.car;if(changed&&this.ui)this.ui.buildDynamicFloors();}
   restoreDesignSettings(){const saved=this.settingsStore.load();if(!saved)return;if(saved.useOffice30)this.config.applyBuildingPreset('office30');else if(!this.config.restore(saved.data))this.config.reset();if(saved.migrated)this.saveDesignSettings();}
   saveDesignSettings(){this.settingsStore.save(this.config.snapshot());}
   bind3DInput(){
@@ -51,7 +51,7 @@ class ElevatorApp {
   handle3DInteraction(action){
     if(action.type==='hallCall'){
       if(Number(action.floor)!==this.playerFloor){this.playerFloor=Number(action.floor);this.camera.setHall(this.playerFloor);}
-      this.call(action.direction);return;
+      this.call(action.direction,action.elevatorId);return;
     }
     if(action.type==='carCall'){if(this.inside)this.selectFloor(Number(action.floor));return;}
     if(action.type==='doorOpen'){this.openDoor();return;}if(action.type==='doorClose')this.closeDoor();
@@ -62,6 +62,13 @@ class ElevatorApp {
     else{
       const f=this.playerFloor,now=performance.now(),blinkOn=Math.floor(now/250)%2===0;
       for(const direction of ['up','down']){
+        if(this.config.hasDistinctServiceZones()){
+          for(const unit of this.bank.units.values()){
+            const e=unit.controller,queued=e.target===f||e.calls.queue.some(x=>x.floor===f&&x.direction===direction),sameFloor=e.state==='SAME_FLOOR_RESPONSE'&&Math.round(e.position)===f&&e.sameFloorDirection===(direction==='up'?1:-1),arriving=e.arrivalFloor===f&&now<e.arrivalFlashUntil&&e.arrivalDirection===(direction==='up'?1:-1),active=queued||sameFloor||arriving;
+            this.building.setHallCallLight(f,direction,arriving?blinkOn:active,arriving,unit.id);
+          }
+          continue;
+        }
         const assignedId=this.dispatch.assignedTo(f,direction);
         const assigned=assignedId?this.bank.get(assignedId):null,assignedElevator=assigned?.controller;
         const queued=!!assignedElevator&&(assignedElevator.target===f||assignedElevator.calls.queue.some(x=>x.floor===f&&x.direction===direction));
@@ -76,11 +83,11 @@ class ElevatorApp {
   }
   destroySimulation(){if(this.passengers)this.passengers.dispose();if(this.bank)this.bank.dispose();if(this.building)this.building.dispose();}
   log(text){const el=document.getElementById('log'),time=new Date().toLocaleTimeString('ja-JP',{hour12:false});const lines=(`[${time}] ${text}\n`+el.textContent).split('\n').slice(0,40);el.textContent=lines.join('\n');}
-  call(direction){this.audio.unlock();if(!this.config.isServed(this.playerFloor)){this.log(`${this.playerFloor}Fは通過階のため呼び出せません`);return;}const isNew=!this.dispatch.hasActiveCall(this.playerFloor,direction);const id=this.dispatch.assign(this.playerFloor,direction);if(isNew)this.audio.playCall();this.log(isNew?`${this.playerFloor}F ${direction==='up'?'上':'下'}呼び：自動判定で${id}号機を配車`:`${this.playerFloor}F ${direction==='up'?'上':'下'}呼び：受付済み（${id}号機）`);}
+  call(direction,elevatorId=null){this.audio.unlock();const zoned=this.config.hasDistinctServiceZones(),requestedId=zoned?elevatorId:null;if(requestedId&&!this.config.isServed(this.playerFloor,requestedId)){this.log(`${requestedId}号機は${this.playerFloor}Fに停止しません`);return;}if(!this.config.isServed(this.playerFloor)){this.log(`${this.playerFloor}Fは通過階のため呼び出せません`);return;}const isNew=requestedId?!this.dispatch.isUnitCallActive(requestedId,this.playerFloor,direction):!this.dispatch.hasActiveCall(this.playerFloor,direction);const id=requestedId?this.dispatch.assignTo(requestedId,this.playerFloor,direction):this.dispatch.assign(this.playerFloor,direction);if(isNew)this.audio.playCall();const mode=requestedId?`${id}号機を指定`:`自動判定で${id}号機を配車`;this.log(isNew?`${this.playerFloor}F ${direction==='up'?'上':'下'}呼び：${mode}`:`${this.playerFloor}F ${direction==='up'?'上':'下'}呼び：${id}号機で受付済み`);}
   canEnter(){return !this.inside&&!!this.bank.findBoardable(this.playerFloor);}
   enter(){this.audio.unlock();const unit=this.bank.findBoardable(this.playerFloor);if(!unit){this.log('まだ乗車できません。停止とドア開を待ってください');return;}this.syncActiveUnit(unit);this.inside=true;this.camera.setCabin();this.boardingCloseTimer=null;this.elevator.extendDoorHold(3.0);this.log(`${this.playerFloor}Fから${unit.id}号機へ乗車`);}
   exit(){if(!this.inside||!this.doors.isBoardable())return;this.playerFloor=Math.round(this.elevator.position);this.inside=false;this.boardingCloseTimer=null;this.camera.setHall(this.playerFloor);this.log(`${this.playerFloor}Fで降車`);}
-  selectFloor(floor){this.audio.unlock();if(!this.inside)return;if(!this.config.isServed(floor)){this.log(`${floor}Fは通過階です`);return;}this.boardingCloseTimer=null;this.elevator.request(floor,'car');this.doors.close();this.elevator.state='DOOR';this.log(`かご呼び ${floor}F`);}
+  selectFloor(floor){this.audio.unlock();if(!this.inside)return;if(!this.config.isServed(floor,this.bank.activeId)){this.log(`${floor}Fは${this.bank.activeId}号機の通過階です`);return;}this.boardingCloseTimer=null;this.elevator.request(floor,'car');this.doors.close();this.elevator.state='DOOR';this.log(`かご呼び ${floor}F`);}
   openDoor(){if(this.inside&&Math.abs(this.elevator.position-Math.round(this.elevator.position))<.08&&this.elevator.commandOpen())this.log('開ボタン・保持時間延長');}
   closeDoor(){if(this.inside){this.elevator.commandClose();this.log('閉ボタン');}}
   jump(floor){if(this.inside)return;this.boardingCloseTimer=null;this.doors.forceClosed();this.playerFloor=floor;this.camera.setHall(floor);this.log(`試験用移動 ${floor}F`);}

@@ -15,7 +15,7 @@ export class ElevatorController {
     if(this.planner)this.planner.applyConfig(c);
   }
   request(floor,direction,options={}){
-    if(floor<1||floor>this.building.floors)return;if(this.building.floorService&&!this.building.floorService.isServed(floor)){this.log(`${floor}Fは通過階です`);return;}
+    if(floor<1||floor>this.building.floors)return;if(this.calls.floorService&&!this.calls.floorService.isServed(floor)){this.log(`${floor}Fはこの号機の通過階です`);return;}
     if(Math.abs(this.position-floor)<.002&&this.target===null&&Math.abs(this.velocity)<.001){
       if(this.doors.isOpen()||this.doors.isBoardable()||this.state==='SAME_FLOOR_RESPONSE')return;
       this.startSameFloorResponse(floor,direction);return;

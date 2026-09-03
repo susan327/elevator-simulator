@@ -1,4 +1,4 @@
-const CACHE_NAME='elevator-simulator-v34';
+const CACHE_NAME='elevator-simulator-v36';
 const CORE_ASSETS=['./','./index.html','./app/','./app/index.html','./manifest.webmanifest','./pwa-icon.svg','./motor-sound-generator.html','./motor-sound-generator.js','./motor-sound-preset.json'];
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE_NAME).then(cache=>cache.addAll(CORE_ASSETS)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key!==CACHE_NAME).map(key=>caches.delete(key)))).then(()=>self.clients.claim())));

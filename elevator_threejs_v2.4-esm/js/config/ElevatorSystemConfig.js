@@ -17,8 +17,10 @@ export class ElevatorSystemConfig {
     this.defaults={floors:30,floorHeight:3.60,cabinPreset:'medium',motionPreset:'high',buildingPreset:'office30'};
     this.reset();
   }
-  reset(){this.floors=this.defaults.floors;this.floorHeight=this.defaults.floorHeight;this.buildingPreset=this.defaults.buildingPreset;this.applyCabinPreset(this.defaults.cabinPreset);this.applyMotionPreset(this.defaults.motionPreset);if(!this.floorService)this.floorService=new FloorServiceConfig(this.floors,this.floorHeight);else this.floorService.updateBuilding(this.floors,this.floorHeight);this.floorService.applyPreset('all');}
-  applyBuildingPreset(key){if(key!=='office30')return false;this.floors=30;this.floorHeight=3.60;this.buildingPreset=key;this.applyCabinPreset('medium');this.applyMotionPreset('high');if(!this.floorService)this.floorService=new FloorServiceConfig(this.floors,this.floorHeight);else this.floorService.updateBuilding(this.floors,this.floorHeight);this.floorService.applyPreset('all');return true;}
+  reset(){this.floors=this.defaults.floors;this.floorHeight=this.defaults.floorHeight;this.buildingPreset=this.defaults.buildingPreset;this.applyCabinPreset(this.defaults.cabinPreset);this.applyMotionPreset(this.defaults.motionPreset);this.setupFloorServices();this.applyZonedServiceDefaults();}
+  setupFloorServices(){if(!this.floorService)this.floorService=new FloorServiceConfig(this.floors,this.floorHeight);else this.floorService.updateBuilding(this.floors,this.floorHeight);this.floorService.applyPreset('all');if(!this.unitFloorServices)this.unitFloorServices={A:new FloorServiceConfig(this.floors,this.floorHeight,{requireTerminals:false}),B:new FloorServiceConfig(this.floors,this.floorHeight,{requireTerminals:false})};else for(const service of Object.values(this.unitFloorServices))service.updateBuilding(this.floors,this.floorHeight);}
+  applyZonedServiceDefaults(){const transfer=Math.min(15,this.floors),a=`1-${transfer}`,b=this.floors>transfer?`1,2,${transfer}-${this.floors}`:`1-${this.floors}`;this.applyUnitServiceExpression('A',a);this.applyUnitServiceExpression('B',b);}
+  applyBuildingPreset(key){if(key!=='office30')return false;this.floors=30;this.floorHeight=3.60;this.buildingPreset=key;this.applyCabinPreset('medium');this.applyMotionPreset('high');this.setupFloorServices();this.applyZonedServiceDefaults();return true;}
   applyCabinPreset(key){const p=this.cabinPresets[key];if(!p)return false;this.cabinPreset=key;Object.assign(this,p);return true;}
   applyMotionPreset(key){const p=this.motionPresets[key];if(!p)return false;this.motionPreset=key;Object.assign(this,p);this.jerk=this.decelJerk;return true;}
   set(key,value){
@@ -28,7 +30,8 @@ export class ElevatorSystemConfig {
       maxSpeed:[.5,8,.25],acceleration:[.35,1.30,.05],deceleration:[.35,1.40,.05],accelJerk:[.20,1.80,.05],decelJerk:[.20,1.80,.05],landingSpeed:[.015,.10,.005],landingDistance:[.15,.80,.05]
     };
     const r=rules[key];if(!r)return false;let n=Number(value);n=Math.max(r[0],Math.min(r[1],n));n=Math.round(n/r[2])*r[2];this[key]=Number(n.toFixed(3));
-    if(['floors','floorHeight'].includes(key)){this.buildingPreset='custom';if(this.floorService)this.floorService.updateBuilding(this.floors,this.floorHeight);}
+    if(key==='floors'){this.buildingPreset='custom';this.setupFloorServices();this.applyZonedServiceDefaults();}
+    else if(key==='floorHeight'){this.buildingPreset='custom';this.setupFloorServices();}
     if(['carWidth','carDepth','carHeight','doorWidth','doorHeight','windowWidth','windowHeight','windowTopMargin'].includes(key))this.cabinPreset='custom';
     if(['maxSpeed','acceleration','deceleration','accelJerk','decelJerk','landingSpeed','landingDistance'].includes(key))this.motionPreset='custom';
     this.jerk=this.decelJerk;return true;
@@ -43,7 +46,7 @@ export class ElevatorSystemConfig {
     if(this.doorHeight>this.carHeight-.05)errors.push('ドア高さは、かご内高さより0.05m以上低くしてください。');
     if(this.windowWidth>this.doorWidth/2-.08)errors.push('窓幅が片側ドア幅に収まりません。');
     if(this.windowHeight+this.windowTopMargin>this.doorHeight-.18)errors.push('窓高さと上端余白の組み合わせがドア内に収まりません。');
-    const doorPanelWidth=this.doorWidth+Math.max(.12,this.doorWidth*.14),frameSide=Math.max(.13,Math.min(.19,this.doorWidth*.16)),panelWidth=ControlPanelLayout.forCount(this.servedFloors.length).panelWidth;
+    const doorPanelWidth=this.doorWidth+Math.max(.12,this.doorWidth*.14),frameSide=Math.max(.13,Math.min(.19,this.doorWidth*.16)),panelWidth=ControlPanelLayout.forCount(Math.max(...['A','B'].map(id=>this.servedFloorsFor(id).length))).panelWidth;
     if(this.carWidth<doorPanelWidth+frameSide*2+(panelWidth+.10)*2)errors.push('かご幅が、中央ドアの左右同幅と右側操作盤スペースを両立する必要幅に足りません。');
     if(this.floors<=8&&this.maxSpeed>=5)warnings.push('低層建物では超高速設定の効果がほとんど出ません。');
     if(this.floors>=30&&this.maxSpeed<=1)warnings.push('高層建物に低速設定のため、所要時間が長くなります。');
@@ -51,15 +54,18 @@ export class ElevatorSystemConfig {
   }
   applyServicePreset(key){return this.floorService.applyPreset(key);}
   applyServiceExpression(text){return this.floorService.applyExpression(text);}
+  applyUnitServiceExpression(id,text){const service=this.unitFloorServices?.[id];if(!service)return false;return service.applyExpression(text);}
   restore(saved){
     if(!saved||typeof saved!=='object')return false;
     if(this.cabinPresets[saved.cabinPreset])this.applyCabinPreset(saved.cabinPreset);if(this.motionPresets[saved.motionPreset])this.applyMotionPreset(saved.motionPreset);this.buildingPreset=saved.buildingPreset||'custom';
     const keys=['floors','floorHeight','carWidth','carDepth','carHeight','doorWidth','doorHeight','windowWidth','windowHeight','windowTopMargin','maxSpeed','acceleration','deceleration','accelJerk','decelJerk','landingSpeed','landingDistance'];
     for(const key of keys)if(Number.isFinite(Number(saved[key])))this.set(key,Number(saved[key]));
-    if(Array.isArray(saved.servedFloors))this.applyServiceExpression(saved.servedFloors.join(','));
+    if(Array.isArray(saved.servedFloors))this.applyServiceExpression(saved.servedFloors.join(','));if(saved.unitServedFloors)for(const id of ['A','B'])if(Array.isArray(saved.unitServedFloors[id]))this.applyUnitServiceExpression(id,saved.unitServedFloors[id].join(','));
     this.buildingPreset=saved.buildingPreset==='office30'&&this.floors===30&&this.floorHeight===3.6?'office30':'custom';this.cabinPreset=this.cabinPresets[saved.cabinPreset]?saved.cabinPreset:'custom';this.motionPreset=this.motionPresets[saved.motionPreset]?saved.motionPreset:'custom';return this.validate().ok;
   }
-  isServed(floor){return this.floorService.isServed(Number(floor));}
+  isServed(floor,id=null){if(id)return !!this.unitFloorServices?.[id]?.isServed(Number(floor));return ['A','B'].some(unitId=>this.unitFloorServices?.[unitId]?.isServed(Number(floor)));}
+  servedFloorsFor(id){return this.unitFloorServices?.[id]?.servedNumbers||[];}
+  hasDistinctServiceZones(){return this.servedFloorsFor('A').join(',')!==this.servedFloorsFor('B').join(',');}
   get servedFloors(){return this.floorService.servedNumbers;}
-  snapshot(){return JSON.parse(JSON.stringify({floors:this.floors,floorHeight:this.floorHeight,buildingPreset:this.buildingPreset,cabinPreset:this.cabinPreset,motionPreset:this.motionPreset,capacity:this.capacity,load:this.load,carWidth:this.carWidth,carDepth:this.carDepth,carHeight:this.carHeight,doorWidth:this.doorWidth,doorHeight:this.doorHeight,windowWidth:this.windowWidth,windowHeight:this.windowHeight,windowTopMargin:this.windowTopMargin,maxSpeed:this.maxSpeed,acceleration:this.acceleration,deceleration:this.deceleration,accelJerk:this.accelJerk,decelJerk:this.decelJerk,landingSpeed:this.landingSpeed,landingDistance:this.landingDistance,maxLandingDeceleration:this.maxLandingDeceleration,maxLandingJerk:this.maxLandingJerk,minLandingTime:this.minLandingTime,servicePreset:this.floorService.preset,servedFloors:this.floorService.servedNumbers}));}
+  snapshot(){return JSON.parse(JSON.stringify({floors:this.floors,floorHeight:this.floorHeight,buildingPreset:this.buildingPreset,cabinPreset:this.cabinPreset,motionPreset:this.motionPreset,capacity:this.capacity,load:this.load,carWidth:this.carWidth,carDepth:this.carDepth,carHeight:this.carHeight,doorWidth:this.doorWidth,doorHeight:this.doorHeight,windowWidth:this.windowWidth,windowHeight:this.windowHeight,windowTopMargin:this.windowTopMargin,maxSpeed:this.maxSpeed,acceleration:this.acceleration,deceleration:this.deceleration,accelJerk:this.accelJerk,decelJerk:this.decelJerk,landingSpeed:this.landingSpeed,landingDistance:this.landingDistance,maxLandingDeceleration:this.maxLandingDeceleration,maxLandingJerk:this.maxLandingJerk,minLandingTime:this.minLandingTime,servicePreset:this.floorService.preset,servedFloors:this.floorService.servedNumbers,unitServedFloors:Object.fromEntries(['A','B'].map(id=>[id,this.servedFloorsFor(id)]))}));}
 }
