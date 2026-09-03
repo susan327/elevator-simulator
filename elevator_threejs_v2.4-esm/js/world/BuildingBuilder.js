@@ -1,7 +1,9 @@
 import * as THREE from 'three';
+import { OfficeFloorCatalog } from './OfficeFloorCatalog.js';
+import { FloorSceneBuilder } from './FloorSceneBuilder.js';
 
 export class BuildingBuilder {
-  constructor(scene,{floors=20,floorHeight=3.6,geometryConfig=null,floorService=null}={}){this.scene=scene;this.floors=floors;this.floorHeight=floorHeight;this.geometryConfig=geometryConfig;this.floorService=floorService;this.group=new THREE.Group();scene.add(this.group);this.hallDoors=[];this.hallButtons=[];this.hallIndicators=[];this.floorGroups=[];this.interactiveObjects=[];this.build();this.setVisibleFloor(1);}
+  constructor(scene,{floors=20,floorHeight=3.6,geometryConfig=null,floorService=null}={}){this.scene=scene;this.floors=floors;this.floorHeight=floorHeight;this.geometryConfig=geometryConfig;this.floorService=floorService;this.floorSceneBuilder=new FloorSceneBuilder(this);this.group=new THREE.Group();scene.add(this.group);this.hallDoors=[];this.hallButtons=[];this.hallIndicators=[];this.floorGroups=[];this.interactiveObjects=[];this.build();this.setVisibleFloor(1);}
   floorY(floor){const exact=Number(floor);if(Number.isInteger(exact)&&this.floorService){const data=this.floorService.getFloor(exact);if(data)return data.elevation;}return (exact-1)*this.floorHeight;}
   mat(color,props={}){return new THREE.MeshStandardMaterial({color,roughness:.78,metalness:.04,...props});}
   box(w,h,d,color,x,y,z,props={},parent=this.group){const mesh=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),this.mat(color,props));mesh.position.set(x,y,z);mesh.receiveShadow=false;mesh.castShadow=false;parent.add(mesh);return mesh;}
@@ -33,6 +35,7 @@ export class BuildingBuilder {
     leaf.position.set(leaf.userData.closedX,0,z);parent.add(leaf);return leaf;
   }
   floorProfile(f){
+    const signature=OfficeFloorCatalog.get(f);if(signature)return signature;
     const names=['','MAIN ENTRANCE','VISITOR RECEPTION','SALES','CUSTOMER SUCCESS','HUMAN RESOURCES','CONFERENCE CENTER','FINANCE','LEGAL','GENERAL AFFAIRS','TRAINING CENTER','SKY LOBBY','ENGINEERING','PRODUCT DESIGN','QUALITY LAB','IT OPERATIONS','SECURITY CENTER','DATA & AI','RESEARCH & DEVELOPMENT','MARKETING','PROJECT HUB','SKY LOBBY','GLOBAL BUSINESS','CORPORATE STRATEGY','CONSULTING','INNOVATION LAB','EXECUTIVE SUPPORT','BOARD OFFICE','EXECUTIVE OFFICE','PRESIDENT OFFICE','OBSERVATION LOUNGE'];
     let type='office',zone=f<=10?'LOW-RISE OFFICE':f<=20?'MID-RISE OFFICE':'HIGH-RISE OFFICE';
     if(f===1)type='lobby';else if(f===11||f===21)type='lounge';else if(f===6||f===10||f===16||f===20||f===25)type='meeting';else if(f===30)type='observation';else if(f>=27)type='executive';
@@ -41,6 +44,7 @@ export class BuildingBuilder {
   }
   buildFloorScenery(lobby,f,lobbyH){
     const backZ=9.95,{type,zone,name,accent}=this.floorProfile(f);
+    const profile=this.floorProfile(f);if(this.floorSceneBuilder.build(lobby,f,lobbyH,profile))return;
 
     this.box(10.8,2.55,.10,accent,0,1.42,backZ-.18,{roughness:.88},lobby);
     this.box(3.1,.38,.08,0x12171d,0,2.75,backZ-.10,{roughness:.75},lobby);
