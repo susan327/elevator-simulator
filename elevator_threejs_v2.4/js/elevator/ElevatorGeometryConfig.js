@@ -19,7 +19,7 @@ class ElevatorGeometryConfig {
   get frameOuterHeight(){return this.doorHeight+this.frameTop;}
   get openingWithPockets(){return this.frameOuterWidth+this.pocketWidth*2;}
   get controlPanelColumns(){return ControlPanelLayout.forCount(this.system.servedFloors?.length??this.system.floors).columns;}
-  get controlPanelWidth(){return Math.min(.50,Math.max(.34,this.controlPanelColumns*.09+.11));}
+  get controlPanelWidth(){return ControlPanelLayout.forCount(this.system.servedFloors?.length??this.system.floors).panelWidth;}
   get controlPanelSideWidth(){return this.controlPanelWidth+.10;}
   get doorCenterX(){return 0;}
   get minimumCarWidth(){return this.frameOuterWidth+this.controlPanelSideWidth*2;}

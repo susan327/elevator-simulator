@@ -63,8 +63,9 @@ class ElevatorApp {
   jump(floor){if(this.inside)return;this.boardingCloseTimer=null;this.doors.forceClosed();this.playerFloor=floor;this.camera.setHall(floor);this.log(`試験用移動 ${floor}F`);}
   setSpeed(v){this.clock.setScale(v);this.log(`時間倍率 ×${v}`);}
   scheduleDesignUpdate(kind='geometry'){
-    const result=this.config.validate();this.ui.updateValidation();if(!result.ok)return;this.saveDesignSettings();
-    if(kind==='motion'){this.elevator.applyMotion(this.config);this.ui.update();return;}
+    const result=this.config.validate();this.ui.updateValidation();
+    if(kind==='motion'){this.saveDesignSettings();this.bank.applyMotion(this.config);this.ui.update();return;}
+    if(!result.ok)return;this.saveDesignSettings();
     clearTimeout(this.designTimer);this.designTimer=setTimeout(()=>this.rebuildFromDesign(),kind==='building'?420:180);
   }
   rebuildFromDesign(){

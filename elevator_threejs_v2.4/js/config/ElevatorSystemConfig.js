@@ -6,10 +6,10 @@ class ElevatorSystemConfig {
       large:{label:'大型 20人',capacity:20,load:1350,carWidth:2.70,carDepth:1.70,carHeight:2.40,doorWidth:1.10,doorHeight:2.10,windowWidth:.28,windowHeight:1.47,windowTopMargin:.15}
     };
     this.motionPresets={
-      low:{label:'低速',maxSpeed:1.00,acceleration:.50,deceleration:.48,accelJerk:.42,decelJerk:.36,landingSpeed:.040,landingDistance:.24,maxLandingDeceleration:.26,maxLandingJerk:.32,minLandingTime:1.15},
-      medium:{label:'中速',maxSpeed:1.75,acceleration:.62,deceleration:.58,accelJerk:.48,decelJerk:.40,landingSpeed:.035,landingDistance:.29,maxLandingDeceleration:.28,maxLandingJerk:.35,minLandingTime:1.20},
-      high:{label:'高速',maxSpeed:3.00,acceleration:.74,deceleration:.66,accelJerk:.54,decelJerk:.43,landingSpeed:.030,landingDistance:.35,maxLandingDeceleration:.30,maxLandingJerk:.38,minLandingTime:1.25},
-      ultra:{label:'超高速',maxSpeed:5.00,acceleration:.84,deceleration:.72,accelJerk:.60,decelJerk:.46,landingSpeed:.025,landingDistance:.42,maxLandingDeceleration:.32,maxLandingJerk:.42,minLandingTime:1.30}
+      low:{label:'低速',maxSpeed:1.00,acceleration:.40,deceleration:.35,accelJerk:.28,decelJerk:.22,landingSpeed:.040,landingDistance:.20,maxLandingDeceleration:.22,maxLandingJerk:.26,minLandingTime:1.15},
+      medium:{label:'中速',maxSpeed:1.75,acceleration:.52,deceleration:.45,accelJerk:.36,decelJerk:.28,landingSpeed:.035,landingDistance:.25,maxLandingDeceleration:.26,maxLandingJerk:.31,minLandingTime:1.20},
+      high:{label:'高速',maxSpeed:3.00,acceleration:.65,deceleration:.55,accelJerk:.45,decelJerk:.35,landingSpeed:.030,landingDistance:.30,maxLandingDeceleration:.30,maxLandingJerk:.36,minLandingTime:1.25},
+      ultra:{label:'超高速',maxSpeed:5.00,acceleration:.78,deceleration:.65,accelJerk:.55,decelJerk:.42,landingSpeed:.025,landingDistance:.38,maxLandingDeceleration:.34,maxLandingJerk:.42,minLandingTime:1.30}
     };
     this.defaults={floors:30,floorHeight:3.60,cabinPreset:'medium',motionPreset:'high',buildingPreset:'office30'};
     this.reset();
@@ -40,7 +40,7 @@ class ElevatorSystemConfig {
     if(this.doorHeight>this.carHeight-.05)errors.push('ドア高さは、かご内高さより0.05m以上低くしてください。');
     if(this.windowWidth>this.doorWidth/2-.08)errors.push('窓幅が片側ドア幅に収まりません。');
     if(this.windowHeight+this.windowTopMargin>this.doorHeight-.18)errors.push('窓高さと上端余白の組み合わせがドア内に収まりません。');
-    const doorPanelWidth=this.doorWidth+Math.max(.12,this.doorWidth*.14),frameSide=Math.max(.13,Math.min(.19,this.doorWidth*.16)),cols=ControlPanelLayout.forCount(this.servedFloors.length).columns,panelWidth=Math.min(.58,Math.max(.36,cols*.105+.12));
+    const doorPanelWidth=this.doorWidth+Math.max(.12,this.doorWidth*.14),frameSide=Math.max(.13,Math.min(.19,this.doorWidth*.16)),panelWidth=ControlPanelLayout.forCount(this.servedFloors.length).panelWidth;
     if(this.carWidth<doorPanelWidth+frameSide*2+(panelWidth+.10)*2)errors.push('かご幅が、中央ドアの左右同幅と右側操作盤スペースを両立する必要幅に足りません。');
     if(this.floors<=8&&this.maxSpeed>=5)warnings.push('低層建物では超高速設定の効果がほとんど出ません。');
     if(this.floors>=30&&this.maxSpeed<=1)warnings.push('高層建物に低速設定のため、所要時間が長くなります。');

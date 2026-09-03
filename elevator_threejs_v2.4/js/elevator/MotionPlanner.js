@@ -20,7 +20,8 @@ class MotionPlanner {
     // quintic速度ランプの最大加速度・最大ジャークを超えない時間。
     const byAccel=1.875*speed/Math.max(.05,accel);
     const byJerk=Math.sqrt(5.78*speed/Math.max(.05,jerk));
-    return Math.max(.35,byAccel,byJerk);
+    // 余裕時間を加え、数値上の上限より穏やかな発進・停止感にする。
+    return Math.max(.35,byAccel,byJerk)*1.25;
   }
   distancesFor(speed){
     const tAccel=this.rampTime(speed,this.accel,this.accelJerk);
@@ -29,34 +30,25 @@ class MotionPlanner {
   }
   create(distanceMeters){
     const D=Math.max(0,distanceMeters);
-    const dLanding=Math.min(this.landingDistance,D*.35);
-    // 着床は速度だけで決めず、最大減速度と最大ジャークの両方を満たす時間を使う。
-    // quintic速度曲線は区間の両端で加速度・ジャークが0になり、停止時の「ドスン」を防げる。
-    const byLandingAccel=dLanding>0?Math.sqrt(3.75*dLanding/this.maxLandingDeceleration):0;
-    const byLandingJerk=dLanding>0?Math.cbrt(11.55*dLanding/this.maxLandingJerk):0;
-    const landingTime=dLanding>0?Math.min(this.maxLandingTime,Math.max(this.minLandingTime,byLandingAccel,byLandingJerk)):0;
-    const landingSpeed=Math.min(this.maxSpeed,Math.max(this.landingSpeed,landingTime>0?2*dLanding/landingTime:0));
     let peak=this.maxSpeed;
-    let parts=this.distancesFor(peak);
-    const mainDistance=Math.max(0,D-dLanding);
-    const measure=speed=>{const a=this.rampTime(speed,this.accel,this.accelJerk),delta=Math.max(0,speed-landingSpeed),d=this.rampTime(delta,this.decel,this.decelJerk);return {tAccel:a,tDecel:d,dAccel:.5*speed*a,dDecel:.5*(speed+landingSpeed)*d};};
-    parts=measure(peak);
-    if(parts.dAccel+parts.dDecel>mainDistance){
-      let lo=landingSpeed,hi=this.maxSpeed;
+    const measure=speed=>{const a=this.rampTime(speed,this.accel,this.accelJerk),d=this.rampTime(speed,this.decel,this.decelJerk);return {tAccel:a,tDecel:d,dAccel:.5*speed*a,dDecel:.5*speed*d};};
+    let parts=measure(peak);
+    if(parts.dAccel+parts.dDecel>D){
+      let lo=0,hi=this.maxSpeed;
       for(let i=0;i<48;i++){
         const mid=(lo+hi)/2,p=measure(mid);
-        if(p.dAccel+p.dDecel>mainDistance)hi=mid;else lo=mid;
+        if(p.dAccel+p.dDecel>D)hi=mid;else lo=mid;
       }
       peak=lo;parts=measure(peak);
     }
-    const dCruise=Math.max(0,mainDistance-parts.dAccel-parts.dDecel);
+    const dCruise=Math.max(0,D-parts.dAccel-parts.dDecel);
     const tCruise=peak>.0001?dCruise/peak:0;
-    const tLanding=landingSpeed>.0001?2*dLanding/landingSpeed:0;
+    const dLanding=Math.min(this.landingDistance,parts.dDecel);
     return {
-      distance:D,peakSpeed:peak,landingSpeed,
-      tAccel:parts.tAccel,tCruise,tDecel:parts.tDecel,tLanding,
+      distance:D,peakSpeed:peak,landingSpeed:0,
+      tAccel:parts.tAccel,tCruise,tDecel:parts.tDecel,tLanding:0,
       dAccel:parts.dAccel,dCruise,dDecel:parts.dDecel,dLanding,
-      totalTime:parts.tAccel+tCruise+parts.tDecel+tLanding
+      totalTime:parts.tAccel+tCruise+parts.tDecel
     };
   }
   sample(plan,time){
@@ -77,14 +69,14 @@ class MotionPlanner {
     if(t<=plan.tAccel+plan.tCruise+plan.tDecel){
     const td=t-plan.tAccel-plan.tCruise;
     const u=plan.tDecel>0?td/plan.tDecel:1;
-    const delta=plan.peakSpeed-plan.landingSpeed;
+    const decelDistance=plan.peakSpeed*plan.tDecel*(u-this.smoothIntegral(u));
+    const remaining=plan.dDecel-decelDistance;
     return {
-      distance:plan.dAccel+plan.dCruise+plan.landingSpeed*td+delta*plan.tDecel*(u-this.smoothIntegral(u)),
-      velocity:plan.landingSpeed+delta*(1-this.smooth(u)),
-      acceleration:-delta/plan.tDecel*this.smoothDerivative(u),phase:'DECELERATING'
+      distance:plan.dAccel+plan.dCruise+decelDistance,
+      velocity:plan.peakSpeed*(1-this.smooth(u)),
+      acceleration:-plan.peakSpeed/plan.tDecel*this.smoothDerivative(u),phase:remaining<=plan.dLanding?'LANDING':'DECELERATING'
     };
     }
-    const tl=t-plan.tAccel-plan.tCruise-plan.tDecel,u=plan.tLanding>0?tl/plan.tLanding:1;
-    return {distance:plan.dAccel+plan.dCruise+plan.dDecel+plan.landingSpeed*plan.tLanding*(u-this.smoothIntegral(u)),velocity:plan.landingSpeed*(1-this.smooth(u)),acceleration:-plan.landingSpeed/plan.tLanding*this.smoothDerivative(u),phase:'LANDING'};
+    return {distance:plan.distance,velocity:0,acceleration:0,phase:'LANDING'};
   }
 }
