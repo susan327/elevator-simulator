@@ -1,7 +1,7 @@
 class ElevatorCar {
-  constructor(scene,building,geometryConfig){
-    this.scene=scene;this.building=building;this.config=geometryConfig;
-    this.group=new THREE.Group();scene.add(this.group);
+  constructor(scene,building,geometryConfig,{id='A',shaftX=0}={}){
+    this.scene=scene;this.building=building;this.config=geometryConfig;this.id=id;this.shaftX=shaftX;
+    this.group=new THREE.Group();this.group.position.x=shaftX;this.group.userData.elevatorId=id;scene.add(this.group);
     this.group.position.y=building.floorY(1);this.build();
   }
   mat(color,props={}){return new THREE.MeshStandardMaterial({color,roughness:.44,metalness:.35,...props});}
@@ -44,8 +44,8 @@ class ElevatorCar {
     const c=this.config,served=this.building.floorService?.servedNumbers||Array.from({length:this.building.floors},(_,i)=>i+1);
     this.interactiveObjects=[];this.carButtons=new Map();
     const layout=ControlPanelLayout.forCount(served.length),cols=layout.columns,rows=layout.rows;
-    const panelW=c.controlPanelWidth,maxPanelH=Math.min(1.92,h-.28),availableH=Math.min(maxPanelH,Math.max(.70,.43+rows*.145));
-    const usableButtonH=availableH-.43,stepY=rows>1?usableButtonH/(rows-1):0,cellW=(panelW-.09)/cols;
+    const panelW=c.controlPanelWidth,maxPanelH=Math.min(1.82,h-.34),availableH=Math.min(maxPanelH,Math.max(.66,.38+rows*.13));
+    const usableButtonH=availableH-.38,stepY=rows>1?usableButtonH/(rows-1):0,cellW=(panelW-.07)/cols;
     const buttonSize=Math.max(.040,Math.min(.078,cellW*.64,rows>1?stepY*.58:.078));
     // かご内からドアに向かって右側（Three.js座標では-X側）へ配置する。
     const panelLeftEdge=-w/2+.18,panelX=panelLeftEdge+panelW/2;
@@ -55,7 +55,7 @@ class ElevatorCar {
     served.slice().reverse().forEach((floor,index)=>{
       const row=Math.floor(index/cols),col=index%cols,x=(col-(cols-1)/2)*cellW,y=availableH/2-.30-row*stepY;
       const face=this.mesh(buttonSize,buttonSize,.028,0xd2d9dd,x,y,.075,{metalness:.72,roughness:.18,emissive:0x15222a,emissiveIntensity:.20},panel);
-      face.userData.labelMesh=this.label(floor,buttonSize*.82,buttonSize*.64,panel,x,y,.092,'#111820',.72);
+      face.userData.labelMesh=this.label(floor,buttonSize*.94,buttonSize*.82,panel,x,y,.092,'#090f13',.92);
       face.userData.interaction={type:'carCall',floor,label:String(floor)};face.userData.baseEmissive=0x15222a;this.interactiveObjects.push(face);this.carButtons.set(floor,face);
     });
     const lastFloorY=availableH/2-.30-(rows-1)*stepY,doorY=Math.max(-availableH/2+.13,lastFloorY-.15);

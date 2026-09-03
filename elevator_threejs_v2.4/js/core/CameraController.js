@@ -10,16 +10,23 @@ class CameraController {
   update(){
     if(this.mode==='hall'){
       const y=this.building.floorY(this.floor)+1.58;
-      if(this.camera.fov!==62){this.camera.fov=62;this.camera.updateProjectionMatrix();}
-      this.camera.position.set(0,y,6.25);this.camera.lookAt(0,y,1.35);
+      const phonePortrait=document.body.classList.contains('preview-mobile')||matchMedia('(max-width: 599px) and (orientation: portrait)').matches;
+      const tabletPortrait=document.body.classList.contains('preview-tablet-portrait')||matchMedia('(min-width: 600px) and (max-width: 900px) and (orientation: portrait)').matches;
+      const hallFov=phonePortrait?94:tabletPortrait?76:62,hallZ=phonePortrait?7.65:tabletPortrait?7.35:6.25;
+      if(this.camera.fov!==hallFov){this.camera.fov=hallFov;this.camera.updateProjectionMatrix();}
+      this.camera.position.set(0,y,hallZ);this.camera.lookAt(0,y,1.35);
     }else{
       const y=this.car.group.position.y+1.58;
       const mobilePortrait=document.body.classList.contains('preview-mobile')||matchMedia('(max-width: 599px) and (orientation: portrait)').matches;
       const tabletPortrait=document.body.classList.contains('preview-tablet-portrait')||matchMedia('(min-width: 600px) and (max-width: 900px) and (orientation: portrait)').matches;
-      const cabinFov=mobilePortrait?94:tabletPortrait?74:62,lookX=mobilePortrait?-.30:tabletPortrait?-.12:0;if(this.camera.fov!==cabinFov){this.camera.fov=cabinFov;this.camera.updateProjectionMatrix();}
+      const tabletLandscape=document.body.classList.contains('preview-tablet-landscape')||matchMedia('(min-width: 600px) and (max-width: 1100px) and (orientation: landscape)').matches;
+      const cabinFov=mobilePortrait?94:tabletPortrait?74:tabletLandscape?82:78;
+      const lookX=mobilePortrait?-.30:tabletPortrait?-.12:tabletLandscape?-.28:-.24;
+      const lookY=mobilePortrait||tabletPortrait?y:y-.12;
+      if(this.camera.fov!==cabinFov){this.camera.fov=cabinFov;this.camera.updateProjectionMatrix();}
       // 上下階を見えない位置から先読みし、階境界で壁が突然現れるのを防ぐ。
       this.building.setVisibleFloor(this.car.group.position.y/this.building.floorHeight+1,1);
-      this.camera.position.set(0,y,-.62);this.camera.lookAt(lookX,y,4.25);
+      const shaftX=this.car.shaftX||0;this.camera.position.set(shaftX,y,-.62);this.camera.lookAt(shaftX+lookX,lookY,4.25);
     }
   }
 }
