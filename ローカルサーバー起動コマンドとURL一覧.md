@@ -27,7 +27,7 @@ URL：<http://127.0.0.1:5180/motor-sound-generator.html>
 
 プロジェクト直下の`motor-sound-preset.json`と同じ形式のJSONを貼り付けて試聴できます。
 
-## 公開用ビルドの確認：v2.4 ESM版
+## 公開用ビルドの確認：ES Modules版
 
 ```powershell
 cd "C:\Users\user\Desktop\アプリ\01_現役\エレベーター\elevator_threejs_v2.4-esm"
@@ -37,18 +37,7 @@ npm run preview -- --host 127.0.0.1 --port 4173
 
 URL：<http://127.0.0.1:4173/>
 
-`npm run build`で`dist/`を作成し、`npm run preview`で公開用ビルドを確認します。
-
-## 旧方式：v2.4 CDN版
-
-```powershell
-cd "C:\Users\user\Desktop\アプリ\01_現役\エレベーター\elevator_threejs_v2.4"
-python -m http.server 8004 --bind 127.0.0.1
-```
-
-URL：<http://127.0.0.1:8004/>
-
-Three.jsをCDNから読み込むため、インターネット接続が必要です。
+`npm run build`でプロジェクト直下の`app/`を作成します。GitHub PagesとPWAもこの公開用ES Modules版を起動します。
 
 ## 旧方式：v2.3 CDN版
 

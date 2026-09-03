@@ -4,9 +4,9 @@ import { CallController } from '../control/CallController.js';
 import { ElevatorController } from './ElevatorController.js';
 
 export class ElevatorBank {
-  constructor(scene,building,geometryConfig,{config,audio,log}){
+  constructor(scene,building,geometryConfig,{config,audio,log,shouldPlayArrival}){
     this.building=building;this.units=new Map();
-    for(const id of building.shaftIds){const car=new ElevatorCar(scene,building,geometryConfig,{id,shaftX:building.getShaftCenter(id)}),doors=new DoorController(car,building,id),calls=new CallController(building.floorService),controller=new ElevatorController(car,doors,calls,building,text=>log(`${id}号機：${text}`),config,audio);this.units.set(id,{id,car,doors,calls,controller});}
+    for(const id of building.shaftIds){const car=new ElevatorCar(scene,building,geometryConfig,{id,shaftX:building.getShaftCenter(id)}),doors=new DoorController(car,building,id),calls=new CallController(building.floorService),controller=new ElevatorController(car,doors,calls,building,text=>log(`${id}号機：${text}`),config,audio,floor=>shouldPlayArrival?.(id,floor)??true);this.units.set(id,{id,car,doors,calls,controller});}
     this.activeId='A';const standbyFloor=Math.min(building.floors,Math.max(1,Math.ceil(building.floors/2))),b=this.get('B');b.controller.position=standbyFloor;b.doors.activeFloor=standbyFloor;b.controller.sync();building.setTravelIndicator(standbyFloor,0,'B');
   }
   get(id){return this.units.get(id);}

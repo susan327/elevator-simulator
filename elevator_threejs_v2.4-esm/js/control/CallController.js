@@ -3,6 +3,7 @@ export class CallController {
   request(floor,direction='car'){floor=Number(floor);if(this.floorService&&!this.floorService.isServed(floor))return false;if(!this.queue.some(x=>x.floor===floor&&x.direction===direction))this.queue.push({floor,direction});return true;
   }
   clearFloor(floor){this.queue=this.queue.filter(x=>x.floor!==floor);}
+  cancel(floor,direction){this.queue=this.queue.filter(x=>!(x.floor===Number(floor)&&x.direction===direction));}
   next(position,travelDirection=0){
     if(!this.queue.length)return null;
     const dir=Math.sign(travelDirection);let candidates=[];

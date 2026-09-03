@@ -13,6 +13,10 @@ export class UIController {
     this.el('callUp').onclick=()=>this.app.call('up');this.el('callDown').onclick=()=>this.app.call('down');this.el('enterBtn').onclick=()=>this.app.enter();this.el('exitBtn').onclick=()=>this.app.exit();this.el('enterQuickBtn').onclick=()=>this.app.enter();this.el('exitQuickBtn').onclick=()=>this.app.exit();this.el('openBtn').onclick=()=>this.app.openDoor();this.el('closeBtn').onclick=()=>this.app.closeDoor();this.el('jumpBtn').onclick=()=>this.app.jump(Number(this.el('floorSelect').value));this.el('resetBtn').onclick=()=>location.reload();
     this.el('resetDesign').onclick=()=>this.app.resetDesign();
     this.el('speedButtons').onclick=e=>{const b=e.target.closest('[data-speed]');if(!b)return;this.app.setSpeed(Number(b.dataset.speed));document.querySelectorAll('[data-speed]').forEach(x=>x.classList.toggle('active',x===b));};
+    this.el('autoOperationToggle').onclick=()=>{const enabled=!this.app.passengerConfig.enabled;this.app.automaticOperation.setEnabled(enabled);this.app.log(`自動運転を${enabled?'開始':'停止'}しました`);this.updatePassengerControls();};
+    this.el('demandPattern').onchange=e=>this.app.passengerConfig.setPattern(e.target.value);
+    this.el('passengerInterval').onchange=e=>this.app.passengerConfig.setInterval(e.target.value);
+    this.el('maxWaiting').onchange=e=>this.app.passengerConfig.setMaxWaiting(e.target.value);
     document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>this.showTab(b.dataset.tab));
     this.el('cabinPresets').onclick=e=>{const b=e.target.closest('[data-preset]');if(!b)return;this.app.config.applyCabinPreset(b.dataset.preset);this.updateDesignValues();this.app.scheduleDesignUpdate('geometry');};
     this.el('motionPresets').onclick=e=>{const b=e.target.closest('[data-preset]');if(!b)return;this.app.config.applyMotionPreset(b.dataset.preset);this.updateDesignValues();this.app.scheduleDesignUpdate('motion');};
@@ -41,8 +45,9 @@ export class UIController {
   }
   updateValidation(){const r=this.app.config.validate(),el=this.el('validation'),serviceError=this.app.config.floorService.lastError;el.className='validation';if(serviceError){el.classList.add('error');el.textContent='⚠ 停止階設定: '+serviceError;}else if(!r.ok){el.classList.add('error');el.textContent='⚠ '+r.errors.join(' / ');}else if(r.warnings.length){el.classList.add('warn');el.textContent='△ '+r.warnings.join(' / ');}else el.textContent='設定値は正常です。';}
   updatePerformance(){const el=this.el('perfText');if(el)el.textContent=`${this.app.displayFps || 0} fps / 目標30`; }
+  updatePassengerControls(){const button=this.el('autoOperationToggle'),enabled=this.app.passengerConfig.enabled,stats=this.app.passengers?.stats||{waiting:0,riding:0};button.textContent=`自動運転：${enabled?'ON':'OFF'}`;button.classList.toggle('active',enabled);button.setAttribute('aria-pressed',String(enabled));this.el('passengerStatus').textContent=`待機 ${stats.waiting}人・乗車 ${stats.riding}人`;}
   update(){
-    const a=this.app,e=a.elevator,rounded=Math.round(e.position),inside=a.inside,c=a.config;
+    const a=this.app,e=a.elevator,rounded=Math.round(e.position),inside=a.inside,c=a.config;this.updatePassengerControls();
     this.el('playerFloor').textContent=inside?`${rounded}F（かご内）`:`${a.playerFloor}F`;this.el('carFloor').textContent=`${e.position.toFixed(2)}F`;
     const labels={IDLE:'待機',ACCELERATING:'加速中',CRUISING:'定速運転',DECELERATING:'滑らかに減速中',LANDING:'着床進入中',ARRIVAL_WAIT:'停止・戸開待ち',DOOR:e.doors.isOpen()?'ドア全開':e.doors.target?'ドア開動作中':'ドア閉動作中'};this.el('stateText').textContent=labels[e.state]||e.state;
     this.el('queueText').textContent=[e.target,...a.calls.queue.map(x=>x.floor)].filter(x=>x!=null).join(', ')||'なし';this.el('specText').textContent=`${c.capacity}人・${c.motionPresets[c.motionPreset]?.label||'カスタム'}・${c.floors}階／${c.servedFloors.length}停止`;

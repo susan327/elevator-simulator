@@ -13,6 +13,7 @@ export class ElevatorCar {
     const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),this.mat(color,props));
     m.position.set(x,y,z);m.castShadow=false;m.receiveShadow=false;parent.add(m);return m;
   }
+  presencePanel(w,h,x,y,z,color){const mesh=new THREE.Mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshBasicMaterial({color,side:THREE.FrontSide,toneMapped:false}));mesh.position.set(x,y,z);this.group.add(mesh);return mesh;}
   label(text,w,h,parent,x,y,z,color='#f4f7f8',fontScale=.62){
     const canvas=document.createElement('canvas');canvas.width=256;canvas.height=128;const ctx=canvas.getContext('2d');
     ctx.clearRect(0,0,canvas.width,canvas.height);ctx.fillStyle=color;ctx.textAlign='center';ctx.textBaseline='middle';ctx.font=`700 ${Math.round(canvas.height*fontScale)}px sans-serif`;ctx.fillText(String(text),canvas.width/2,canvas.height/2);
@@ -31,12 +32,13 @@ export class ElevatorCar {
     const windowTop=c.windowTop,windowBottom=Math.max(.26,windowTop-c.windowHeight);
     const visibleWindowWidth=Math.min(c.windowWidth,width-rail*2-.035);
     const sideFill=Math.max(.025,(width-visibleWindowWidth)/2);
-    this.mesh(sideFill,doorH,.10,0x3b3f44,-width/2+sideFill/2,doorH/2,0,metal,leaf);
-    this.mesh(sideFill,doorH,.10,0x3b3f44, width/2-sideFill/2,doorH/2,0,metal,leaf);
-    this.mesh(visibleWindowWidth,windowBottom,.10,0x3b3f44,0,windowBottom/2,0,metal,leaf);
-    this.mesh(visibleWindowWidth,doorH-windowTop,.10,0x3b3f44,0,windowTop+(doorH-windowTop)/2,0,metal,leaf);
-    this.mesh(visibleWindowWidth,.065,.10,0x3b3f44,0,windowBottom+.032,0,metal,leaf);
-    this.mesh(visibleWindowWidth,.065,.10,0x3b3f44,0,windowTop-.032,0,metal,leaf);
+    this.mesh(sideFill,doorH,.10,0x162b43,-width/2+sideFill/2,doorH/2,0,metal,leaf);
+    this.mesh(sideFill,doorH,.10,0x162b43, width/2-sideFill/2,doorH/2,0,metal,leaf);
+    this.mesh(visibleWindowWidth,windowBottom,.10,0x162b43,0,windowBottom/2,0,metal,leaf);
+    this.mesh(visibleWindowWidth,doorH-windowTop,.10,0x162b43,0,windowTop+(doorH-windowTop)/2,0,metal,leaf);
+    this.mesh(visibleWindowWidth,.065,.10,0x162b43,0,windowBottom+.032,0,metal,leaf);
+    this.mesh(visibleWindowWidth,.065,.10,0x162b43,0,windowTop-.032,0,metal,leaf);
+    this.mesh(.012,doorH-.025,.008,0x070b10,side==='left'?width/2-.006:-width/2+.006,doorH/2,-.055,{metalness:.14,roughness:.86},leaf);
     this.mesh(Math.max(.06,visibleWindowWidth-.025),Math.max(.12,windowTop-windowBottom-.095),.028,0xb8c5ca,0,(windowBottom+windowTop)/2,-.055,
       {transparent:true,opacity:.20,roughness:.08,metalness:.02,side:THREE.DoubleSide},leaf);
     leaf.userData.closedX=c.doorCenterX+(side==='left'?-width/2:width/2);
@@ -69,11 +71,15 @@ export class ElevatorCar {
   }
   setCarCallLight(floor,on){const b=this.carButtons?.get(Number(floor));if(!b)return;b.material.emissive.setHex(on?0x116f91:b.userData.baseEmissive);b.material.emissiveIntensity=on?1.8:.20;}
   build(){
-    const c=this.config,w=c.carWidth,h=c.carHeight,d=c.carDepth,frontZ=1.18,floorBackZ=-d/2-.02,floorFrontZ=frontZ+.28,fullFloorDepth=floorFrontZ-floorBackZ,fullFloorCenterZ=(floorFrontZ+floorBackZ)/2;
-    this.mesh(w,.16,fullFloorDepth,0x766d63,0,.08,fullFloorCenterZ,{roughness:.78,metalness:.06});
-    this.mesh(.14,h,fullFloorDepth,0xb9ad9e,-w/2+.07,h/2+.08,fullFloorCenterZ,{roughness:.76,metalness:.07});
-    this.mesh(.14,h,fullFloorDepth,0xb9ad9e, w/2-.07,h/2+.08,fullFloorCenterZ,{roughness:.76,metalness:.07});
-    this.mesh(w,h,.14,0xd2c7b8,0,h/2+.08,-d/2+.07,{roughness:.84,metalness:.02});
+    const c=this.config,w=c.carWidth,h=c.carHeight,d=c.carDepth,frontZ=c.cabinDoorZ-.09,floorBackZ=-d/2-.02,floorFrontZ=c.cabinDoorZ+.04,fullFloorDepth=floorFrontZ-floorBackZ,fullFloorCenterZ=(floorFrontZ+floorBackZ)/2;
+    this.mesh(w,.16,fullFloorDepth,0x766d63,0,-.08,fullFloorCenterZ,{roughness:.78,metalness:.06});
+    this.mesh(.14,h,fullFloorDepth,0xb9ad9e,-w/2+.07,h/2,fullFloorCenterZ,{roughness:.76,metalness:.07});
+    this.mesh(.14,h,fullFloorDepth,0xb9ad9e, w/2-.07,h/2,fullFloorCenterZ,{roughness:.76,metalness:.07});
+    this.mesh(w,h,.14,0xd2c7b8,0,h/2,-d/2+.07,{roughness:.84,metalness:.02});
+    // 乗場窓から見える暖色の内装面。無彩色の昇降路と、移動するかごを判別しやすくする。
+    this.presencePanel(Math.max(.72,w-.32),h-.24,0,h/2+.06,-d/2+.145,0x968a77);
+    this.presencePanel(.026,h-.40,-c.doorLeafWidth/2,h/2+.05,-d/2+.149,0xd6b36f);
+    this.presencePanel(.026,h-.40,c.doorLeafWidth/2,h/2+.05,-d/2+.149,0xd6b36f);
     this.mesh(Math.max(.8,w-.55),.055,.07,0x9c8d7c,0,1.02,-d/2+.13,{metalness:.65,roughness:.25});
     this.mesh(Math.max(.65,w*.48),.045,Math.max(.42,d*.34),0xffe0b1,0,h-.05,-.15,{emissive:0x9a571d,emissiveIntensity:1.15,roughness:.35,metalness:.02});
     const cabinLight=new THREE.PointLight(0xffead2,.55,4.2,1.75);cabinLight.position.set(0,h-.58,-.10);cabinLight.castShadow=false;this.group.add(cabinLight);
@@ -81,17 +87,22 @@ export class ElevatorCar {
     // かご前面の内壁。扉開口以外を完全に覆い、上段構造や台車を見せない。
     const openingW=c.frameOuterWidth, openingH=c.frameOuterHeight,doorX=c.doorCenterX;
 
+    // かご下部：戸口下エプロンと支持フレーム。乗場窓から通過するかごの下端を判別できる。
+    this.mesh(c.doorPanelTotalWidth+.10,.48,.10,0x687178,doorX,-.38,c.cabinDoorZ-.10,{metalness:.58,roughness:.34});
+    this.mesh(Math.max(.82,w-.34),.13,.30,0x4b535a,0,-.65,.86,{metalness:.66,roughness:.30});
+    this.mesh(c.doorPanelTotalWidth-.04,.045,.025,0x9ba3a8,doorX,-.57,c.cabinDoorZ-.042,{metalness:.62,roughness:.24});
+
     // v1.8.2: 既存の屋根は客室本体の奥行きまでしかなく、ドア前室の上が抜けていた。
     // 内装天井と外側屋根をドア前まで延長し、かご内から上部フレームを完全に遮蔽する。
     const roofBackZ=-d/2-.02;
-    const roofFrontZ=frontZ+.22;
+    const roofFrontZ=c.cabinDoorZ+.04;
     const fullRoofDepth=roofFrontZ-roofBackZ;
     const fullRoofCenterZ=(roofFrontZ+roofBackZ)/2;
     this.mesh(w-.02,.12,fullRoofDepth,0xe7dfd3,0,h+.015,fullRoofCenterZ,{roughness:.86,metalness:.01});
     this.mesh(.018,.014,fullRoofDepth-.10,0xaaa092,-w*.25,h-.052,fullRoofCenterZ,{roughness:.9,metalness:.02});
     this.mesh(.018,.014,fullRoofDepth-.10,0xaaa092,w*.25,h-.052,fullRoofCenterZ,{roughness:.9,metalness:.02});
     this.mesh(w-.10,.014,.018,0xaaa092,0,h-.052,fullRoofCenterZ,{roughness:.9,metalness:.02});
-    this.mesh(w+.08,.16,fullRoofDepth+.08,0x252a2f,0,h+.25,fullRoofCenterZ,{metalness:.48,roughness:.31});
+    this.mesh(w+.08,.16,fullRoofDepth+.08,0x687178,0,h+.25,fullRoofCenterZ,{metalness:.48,roughness:.31});
     const leftSideW=Math.max(.08,doorX-openingW/2+w/2),rightSideW=Math.max(.08,w/2-(doorX+openingW/2));
     this.mesh(leftSideW,h,.16,0xb9ad9e,-w/2+leftSideW/2,h/2+.08,frontZ,{roughness:.76,metalness:.07});
     this.mesh(rightSideW,h,.16,0xb9ad9e,w/2-rightSideW/2,h/2+.08,frontZ,{roughness:.76,metalness:.07});
@@ -103,18 +114,18 @@ export class ElevatorCar {
     this.mesh(openingW,c.frameTop,.18,0x4b443d,doorX,openingH-c.frameTop/2,frontZ+.02,{roughness:.48,metalness:.18});
 
     // かご内側の戸袋。開扉時に扉が壁内へ収納されて見える。
-    const pocketDepth=.18,pocketZ=1.28;
+    const pocketDepth=.18,pocketZ=c.cabinDoorZ-.04;
     this.mesh(c.pocketWidth,h+.02,pocketDepth,0x2d3136,doorX-(c.doorPanelTotalWidth/2+c.pocketWidth/2),h/2,pocketZ,{metalness:.62,roughness:.30});
     this.mesh(c.pocketWidth,h+.02,pocketDepth,0x2d3136,doorX+(c.doorPanelTotalWidth/2+c.pocketWidth/2),h/2,pocketZ,{metalness:.62,roughness:.30});
     this.mesh(c.doorPanelTotalWidth+.05,.13,pocketDepth,0x252a2f,doorX,h+.03,pocketZ,{metalness:.55,roughness:.28});
 
     this.leftDoor=this.makeDoorLeaf('left');this.rightDoor=this.makeDoorLeaf('right');
     this.makeControlPanel(w,h,d);
-    this.mesh(w+.02,.14,fullFloorDepth+.04,0x252a2f,0,-.10,fullFloorCenterZ,{metalness:.48,roughness:.31});
+    this.mesh(w+.02,.14,fullFloorDepth+.04,0x596168,0,-.10,fullFloorCenterZ,{metalness:.48,roughness:.31});
     this.setDoorOpen(this.doorProgress||0);
   }
   rebuild(){const y=this.group.position.y;this.disposeObject(this.group);this.group.position.y=y;this.build();}
-  setFloorPosition(floorPosition){this.group.position.y=this.building.floorY(floorPosition);}
+  setFloorPosition(floorPosition){this.group.position.y=this.building.floorY(floorPosition);this.building.setElevatorPosition?.(this.id,floorPosition);}
   setDoorOpen(progress){
     this.doorProgress=THREE.MathUtils.clamp(progress,0,1);if(!this.leftDoor||!this.rightDoor)return;
     this.leftDoor.position.x=THREE.MathUtils.lerp(this.leftDoor.userData.closedX,this.leftDoor.userData.openX,this.doorProgress);

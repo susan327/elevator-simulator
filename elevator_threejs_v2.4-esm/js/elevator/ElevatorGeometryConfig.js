@@ -28,5 +28,5 @@ export class ElevatorGeometryConfig {
   get doorCenterX(){return 0;}
   get minimumCarWidth(){return this.frameOuterWidth+this.controlPanelSideWidth*2;}
   get cabinDoorZ(){return 1.27;}
-  get hallDoorZ(){return this.cabinDoorZ+.08;}
+  get hallDoorZ(){return this.cabinDoorZ+.14;}
 }

@@ -4,11 +4,12 @@ import { FloorSceneBuilder } from './FloorSceneBuilder.js';
 import { MaterialLibrary } from './MaterialLibrary.js';
 
 export class BuildingBuilder {
-  constructor(scene,{floors=20,floorHeight=3.6,geometryConfig=null,floorService=null}={}){this.scene=scene;this.floors=floors;this.floorHeight=floorHeight;this.geometryConfig=geometryConfig;this.floorService=floorService;this.shaftIds=['A','B'];this.materialLibrary=new MaterialLibrary();this.floorSceneBuilder=new FloorSceneBuilder(this);this.group=new THREE.Group();scene.add(this.group);this.hallDoors={A:[],B:[]};this.hallButtons={A:[],B:[]};this.hallIndicators={A:[],B:[]};this.floorGroups=[];this.interactiveObjects=[];this.build();this.setVisibleFloor(1);}
+  constructor(scene,{floors=20,floorHeight=3.6,geometryConfig=null,floorService=null}={}){this.scene=scene;this.floors=floors;this.floorHeight=floorHeight;this.geometryConfig=geometryConfig;this.floorService=floorService;this.shaftIds=['A','B'];this.elevatorPositions={A:NaN,B:NaN};this.materialLibrary=new MaterialLibrary();this.floorSceneBuilder=new FloorSceneBuilder(this);this.group=new THREE.Group();scene.add(this.group);this.hallDoors={A:[],B:[]};this.shaftBacks={A:[],B:[]};this.hallButtons={A:[],B:[]};this.hallIndicators={A:[],B:[]};this.floorGroups=[];this.interactiveObjects=[];this.build();this.setVisibleFloor(1);}
   getShaftCenter(id){return this.shaftCenters?.[id]??0;}
   floorY(floor){const exact=Number(floor);if(Number.isInteger(exact)&&this.floorService){const data=this.floorService.getFloor(exact);if(data)return data.elevation;}return (exact-1)*this.floorHeight;}
   mat(color,props={}){return new THREE.MeshStandardMaterial({color,roughness:.78,metalness:.04,...props});}
   box(w,h,d,color,x,y,z,props={},parent=this.group){const {materialName,...materialProps}=props;const material=materialName?this.materialLibrary.get(materialName):this.mat(color,materialProps);const mesh=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),material);mesh.position.set(x,y,z);mesh.receiveShadow=false;mesh.castShadow=false;parent.add(mesh);return mesh;}
+  shaftCurtain(w,h,x,y,z,parent=this.group){const group=new THREE.Group(),material=new THREE.MeshBasicMaterial({color:0x000000,side:THREE.FrontSide,toneMapped:false}),make=()=>{const mesh=new THREE.Mesh(new THREE.PlaneGeometry(w,1),material);mesh.renderOrder=1;group.add(mesh);return mesh;};group.position.set(x,y-h/2,z);group.userData={height:h,bottom:make(),top:make()};parent.add(group);return group;}
   label(text,w,h,parent,x=0,y=0,z=.061,color='#182027'){
     const canvas=document.createElement('canvas');canvas.width=256;canvas.height=256;const ctx=canvas.getContext('2d');ctx.clearRect(0,0,256,256);ctx.fillStyle=color;ctx.textAlign='center';ctx.textBaseline='middle';ctx.font='700 150px sans-serif';ctx.fillText(String(text),128,132);
     const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;texture.minFilter=THREE.LinearFilter;const mesh=new THREE.Mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshBasicMaterial({map:texture,transparent:true,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-2}));mesh.position.set(x,y,z);parent.add(mesh);return mesh;
@@ -23,14 +24,15 @@ export class BuildingBuilder {
   makeDoorLeaf(parent,side,z=0){
     const leaf=new THREE.Group(),c=this.geometryConfig,width=c.doorLeafWidth,doorHeight=c.doorHeight;
     const windowTop=c.windowTop,windowBottom=Math.max(.26,windowTop-c.windowHeight);
-    const visibleWindowWidth=Math.min(c.windowWidth,width-.08),sideFill=Math.max(.025,(width-visibleWindowWidth)/2),metal={metalness:.72,roughness:.25};
-    this.box(sideFill,doorHeight,.11,0x33373c,-width/2+sideFill/2,doorHeight/2,0,metal,leaf);
-    this.box(sideFill,doorHeight,.11,0x33373c,width/2-sideFill/2,doorHeight/2,0,metal,leaf);
-    this.box(visibleWindowWidth,windowBottom,.11,0x33373c,0,windowBottom/2,0,metal,leaf);
-    this.box(visibleWindowWidth,doorHeight-windowTop,.11,0x33373c,0,windowTop+(doorHeight-windowTop)/2,0,metal,leaf);
-    this.box(visibleWindowWidth,.065,.11,0x33373c,0,windowBottom+.032,0,metal,leaf);
-    this.box(visibleWindowWidth,.065,.11,0x33373c,0,windowTop-.032,0,metal,leaf);
-    this.box(Math.max(.06,visibleWindowWidth-.025),Math.max(.12,windowTop-windowBottom-.095),.028,0xb7c3c7,0,(windowBottom+windowTop)/2,-.055,{transparent:true,opacity:.21,roughness:.08,metalness:.02,side:THREE.DoubleSide},leaf);
+    const visibleWindowWidth=Math.min(c.windowWidth,width-.08),sideFill=Math.max(.025,(width-visibleWindowWidth)/2),metal={metalness:.35,roughness:.20,emissive:0x454a4d,emissiveIntensity:.18};
+    this.box(sideFill,doorHeight,.11,0xd5dadd,-width/2+sideFill/2,doorHeight/2,0,metal,leaf);
+    this.box(sideFill,doorHeight,.11,0xd5dadd,width/2-sideFill/2,doorHeight/2,0,metal,leaf);
+    this.box(visibleWindowWidth,windowBottom,.11,0xd5dadd,0,windowBottom/2,0,metal,leaf);
+    this.box(visibleWindowWidth,doorHeight-windowTop,.11,0xd5dadd,0,windowTop+(doorHeight-windowTop)/2,0,metal,leaf);
+    this.box(visibleWindowWidth,.065,.11,0xd5dadd,0,windowBottom+.032,0,metal,leaf);
+    this.box(visibleWindowWidth,.065,.11,0xd5dadd,0,windowTop-.032,0,metal,leaf);
+    this.box(.012,doorHeight-.025,.008,0x111417,side==='left'?width/2-.006:-width/2+.006,doorHeight/2,.061,{metalness:.18,roughness:.82},leaf);
+    this.box(Math.max(.06,visibleWindowWidth-.025),Math.max(.12,windowTop-windowBottom-.095),.028,0x020609,0,(windowBottom+windowTop)/2,-.055,{transparent:true,opacity:.04,roughness:.08,metalness:.02,side:THREE.DoubleSide},leaf);
     leaf.userData.closedX=side==='left'?-width/2:width/2;
     // 扉中心を戸袋中心へ合わせ、外枠の外へ突き抜けない。
     leaf.userData.openX=side==='left'?-c.pocketCenterX:c.pocketCenterX;
@@ -98,13 +100,13 @@ export class BuildingBuilder {
     const y=this.floorY(f),c=this.geometryConfig,lobby=new THREE.Group(),profile=this.floorProfile(f);lobby.position.y=y;this.group.add(lobby);this.floorGroups[f]=lobby;const {wall,trim}=profile,openingW=c.frameOuterWidth,openingH=c.frameOuterHeight,lobbyH=this.floorHeight,doorXs=this.shaftIds.map(id=>this.shaftCenters[id]);
     const floorMaterial={1:'entranceStone',6:'conferenceCarpet',14:'designTerrazzo',27:'executiveOak'}[f];this.box(16.5,.22,8.8,profile.floor,0,-.11,5.85,{roughness:.92,materialName:floorMaterial},lobby);this.box(16.5,.22,8.8,profile.ceiling,0,lobbyH-.11,5.85,{roughness:.96},lobby);this.box(16.5,lobbyH,.24,wall,0,lobbyH/2,10.2,{roughness:.94},lobby);
     const facadeHalf=8.25,edges=[-facadeHalf,doorXs[0]-openingW/2,doorXs[0]+openingW/2,doorXs[1]-openingW/2,doorXs[1]+openingW/2,facadeHalf];for(const [a,b] of [[edges[0],edges[1]],[edges[2],edges[3]],[edges[4],edges[5]]])this.box(b-a,lobbyH,.18,wall,(a+b)/2,lobbyH/2,1.48,{roughness:.92},lobby);
-    for(const doorX of doorXs){this.box(openingW,Math.max(.15,lobbyH-openingH),.18,wall,doorX,openingH+(lobbyH-openingH)/2,1.48,{roughness:.92},lobby);this.box(c.frameSide,openingH,.22,trim,doorX-openingW/2+c.frameSide/2,openingH/2,1.59,{roughness:.55,metalness:.14},lobby);this.box(c.frameSide,openingH,.22,trim,doorX+openingW/2-c.frameSide/2,openingH/2,1.59,{roughness:.55,metalness:.14},lobby);this.box(openingW,c.frameTop,.22,trim,doorX,openingH-c.frameTop/2,1.59,{roughness:.55,metalness:.14},lobby);this.box(openingW-.08,.10,.28,0x454442,doorX,.03,1.54,{roughness:.75,metalness:.12},lobby);}
+    for(const doorX of doorXs){this.box(openingW,Math.max(.15,lobbyH-openingH),.18,wall,doorX,openingH+(lobbyH-openingH)/2,1.48,{roughness:.92},lobby);this.box(c.frameSide,openingH,.22,trim,doorX-openingW/2+c.frameSide/2,openingH/2,1.59,{roughness:.55,metalness:.14},lobby);this.box(c.frameSide,openingH,.22,trim,doorX+openingW/2-c.frameSide/2,openingH/2,1.59,{roughness:.55,metalness:.14},lobby);this.box(openingW,c.frameTop,.22,trim,doorX,openingH-c.frameTop/2,1.59,{roughness:.55,metalness:.14},lobby);this.box(openingW-.08,.10,.28,0x454442,doorX,-.05,1.54,{roughness:.75,metalness:.12},lobby);}
     for(let gx=-5.4;gx<=5.4;gx+=1.35)this.box(.025,.018,8.2,0x8d857b,gx,.015,5.9,{roughness:1},lobby);for(let gz=2.0;gz<=9.6;gz+=1.25)this.box(12.8,.018,.025,0x8d857b,0,.017,gz,{roughness:1},lobby);
     this.buildFloorScenery(lobby,f,lobbyH);
     this.box(.58,1.05,.58,0x493327,-3.75,.52,6.7,{roughness:.9},lobby);this.box(.85,.64,.85,0x3c6038,-3.75,1.23,6.7,{roughness:.82},lobby);
     for(let i=-2;i<=2;i++)this.box(.42,.045,.42,0xf4e1c5,i*2.25,lobbyH-.23,5.1,{emissive:0x7a4b18,emissiveIntensity:1.35},lobby);
     // 乗場扉は壁内へ収納し、正面から戸袋の柱が見えない構成にする。
-    for(const id of this.shaftIds){const doorX=this.shaftCenters[id],doorGroup=new THREE.Group();doorGroup.position.set(doorX,0,c.hallDoorZ);lobby.add(doorGroup);const left=this.makeDoorLeaf(doorGroup,'left'),right=this.makeDoorLeaf(doorGroup,'right');this.hallDoors[id][f]={group:doorGroup,left,right};this.setHallDoorOpen(f,0,id);this.box(1.25,.40,.10,0x0d0f12,doorX,openingH+.45,1.62,{metalness:.45,roughness:.23},lobby);this.hallIndicators[id][f]=this.makeTravelIndicator(lobby,doorX,openingH+.45,1.676,1.06,.26);this.sign(`${id}号機`,.72,.22,lobby,doorX,openingH+.76,1.676,'#182027','#e9d48d');}
+    for(const id of this.shaftIds){const doorX=this.shaftCenters[id],doorGroup=new THREE.Group();doorGroup.position.set(doorX,0,c.hallDoorZ);lobby.add(doorGroup);const left=this.makeDoorLeaf(doorGroup,'left'),right=this.makeDoorLeaf(doorGroup,'right');this.hallDoors[id][f]={group:doorGroup,left,right};this.shaftBacks[id][f]=this.shaftCurtain(c.doorPanelTotalWidth,c.doorHeight,doorX,c.doorHeight/2,c.cabinDoorZ-.12,lobby);this.setHallDoorOpen(f,0,id);this.box(1.25,.40,.10,0x0d0f12,doorX,openingH+.45,1.62,{metalness:.45,roughness:.23},lobby);this.hallIndicators[id][f]=this.makeTravelIndicator(lobby,doorX,openingH+.45,1.676,1.06,.26);this.sign(`${id}号機`,.72,.22,lobby,doorX,openingH+.76,1.676,'#182027','#e9d48d');}
     for(const id of this.shaftIds)this.buildHallPanel(lobby,f,this.shaftCenters[id]+openingW/2+.28,id);
   }
 
@@ -128,5 +130,8 @@ export class BuildingBuilder {
     if(this.visibleFloorRange===key)return;this.visibleFloorRange=key;
     for(let f=1;f<=this.floors;f++)if(this.floorGroups[f])this.floorGroups[f].visible=Math.abs(f-active)<=range;
   }
-  setHallDoorOpen(floor,progress,id='A'){const d=this.hallDoors[id]?.[floor];if(!d)return;const p=THREE.MathUtils.clamp(progress,0,1);d.left.position.x=THREE.MathUtils.lerp(d.left.userData.closedX,d.left.userData.openX,p);d.right.position.x=THREE.MathUtils.lerp(d.right.userData.closedX,d.right.userData.openX,p);}
+  setCurtainPart(mesh,height,centerY){mesh.visible=height>.001;if(!mesh.visible)return;mesh.scale.y=height;mesh.position.y=centerY;}
+  updateShaftAppearance(id,floor){const d=this.hallDoors[id]?.[floor],back=this.shaftBacks[id]?.[floor];if(!d||!back)return;const h=back.userData.height,opening=(d.progress||0)>.005;if(opening){back.visible=false;return;}back.visible=true;const position=this.elevatorPositions[id];if(!Number.isFinite(position)){this.setCurtainPart(back.userData.bottom,0,0);this.setCurtainPart(back.userData.top,h,h/2);return;}const offsetY=this.floorY(position)-this.floorY(floor),carBottom=offsetY-.72,carTop=offsetY+this.geometryConfig.carHeight+.31,visibleBottom=THREE.MathUtils.clamp(carBottom,0,h),visibleTop=THREE.MathUtils.clamp(carTop,0,h);this.setCurtainPart(back.userData.bottom,visibleBottom,visibleBottom/2);this.setCurtainPart(back.userData.top,h-visibleTop,(h+visibleTop)/2);}
+  setHallDoorOpen(floor,progress,id='A'){const d=this.hallDoors[id]?.[floor];if(!d)return;const p=THREE.MathUtils.clamp(progress,0,1);d.progress=p;d.left.position.x=THREE.MathUtils.lerp(d.left.userData.closedX,d.left.userData.openX,p);d.right.position.x=THREE.MathUtils.lerp(d.right.userData.closedX,d.right.userData.openX,p);this.updateShaftAppearance(id,floor);}
+  setElevatorPosition(id,floorPosition){this.elevatorPositions[id]=floorPosition;for(let f=1;f<=this.floors;f++)this.updateShaftAppearance(id,f);}
 }

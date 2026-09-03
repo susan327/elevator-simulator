@@ -3,7 +3,7 @@
   "short_name": "Elevator",
   "description": "レスポンシブ対応の3Dエレベーターシミュレーター",
   "lang": "ja",
-  "start_url": "./",
+  "start_url": "./app/",
   "scope": "./",
   "display": "standalone",
   "orientation": "any",
@@ -11,7 +11,7 @@
   "theme_color": "#07101a",
   "icons": [{"src":"./pwa-icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}],
   "shortcuts": [
-    {"name":"3Dシミュレーター","short_name":"Simulator","url":"./elevator_threejs_v2.4/index.html"},
+    {"name":"3Dシミュレーター","short_name":"Simulator","url":"./app/"},
     {"name":"モーター音ジェネレーター","short_name":"Sound","url":"./motor-sound-generator.html"}
   ]
 }

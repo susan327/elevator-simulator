@@ -3,7 +3,7 @@ import * as THREE from 'three';
 export class DoorController {
   constructor(car,building,elevatorId='A'){
     this.car=car;this.building=building;this.elevatorId=elevatorId;this.progress=0;this.target=0;this.duration=3.6;this.activeFloor=1;
-    this.startProgress=0;this.elapsed=0;this.motionDuration=0;this.apply();
+    this.startProgress=0;this.elapsed=0;this.motionDuration=0;this.obstructed=false;this.safetyReopenPending=false;this.apply();
   }
   smootherstep(t){t=THREE.MathUtils.clamp(t,0,1);return t*t*t*(t*(t*6-15)+10);}
   apply(){this.car.setDoorOpen(this.progress);this.building.setHallDoorOpen(this.activeFloor,this.progress,this.elevatorId);}
@@ -19,12 +19,15 @@ export class DoorController {
     this.activeFloor=nextFloor;this.animateTo(1);
   }
   close(){this.animateTo(0);}
+  setObstructed(value){this.obstructed=!!value;if(this.obstructed&&this.target===0&&this.progress>.005){this.animateTo(1);this.safetyReopenPending=true;}}
+  consumeSafetyReopen(){const pending=this.safetyReopenPending;this.safetyReopenPending=false;return pending;}
   forceClosed(){this.building.setHallDoorOpen(this.activeFloor,0,this.elevatorId);this.progress=0;this.target=0;this.elapsed=0;this.motionDuration=0;this.apply();}
   isOpen(){return this.progress>=.985;}
   isBoardable(){return this.progress>=.78&&this.target===1;}
   isClosed(){return this.progress<=.005&&this.target===0;}
   isMoving(){return this.motionDuration>0&&this.elapsed<this.motionDuration;}
   update(dt){
+    if(this.obstructed&&this.target===0&&this.progress>.005){this.animateTo(1);this.safetyReopenPending=true;}
     if(!this.isMoving()){this.progress=this.target;this.apply();return;}
     this.elapsed=Math.min(this.motionDuration,this.elapsed+dt);
     const eased=this.smootherstep(this.elapsed/this.motionDuration);

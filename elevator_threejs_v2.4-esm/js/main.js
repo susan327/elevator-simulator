@@ -13,18 +13,23 @@ import { CallController } from './control/CallController.js';
 import { ElevatorController } from './elevator/ElevatorController.js';
 import { UIController } from './ui/UIController.js';
 import { DispatchController } from './control/DispatchController.js';
+import { PassengerSimulationConfig } from './simulation/PassengerSimulationConfig.js';
+import { PassengerRenderer } from './simulation/PassengerRenderer.js';
+import { PassengerManager } from './simulation/PassengerManager.js';
+import { AutomaticOperationController } from './simulation/AutomaticOperationController.js';
 
 class ElevatorApp {
   constructor(){
-    this.playerFloor=1;this.inside=false;this.audio=new AudioManager();this.boardingCloseTimer=null;this.clock=new SimulationClock();this.config=new ElevatorSystemConfig();this.settingsStore=new DesignSettingsStore();this.restoreDesignSettings();
+    this.playerFloor=1;this.inside=false;this.audio=new AudioManager();this.boardingCloseTimer=null;this.clock=new SimulationClock();this.config=new ElevatorSystemConfig();this.passengerConfig=new PassengerSimulationConfig();this.settingsStore=new DesignSettingsStore();this.restoreDesignSettings();
     this.sceneManager=new SceneManager(document.getElementById('viewport'));this.raycaster=new THREE.Raycaster();this.pointer=new THREE.Vector2();this.createSimulation();this.ui=new UIController(this);this.bind3DInput();document.addEventListener('pointerdown',()=>this.audio.unlock(),{capture:true});
     this.designTimer=null;this.lastRender=0;this.frameInterval=1000/30;this.fpsFrames=0;this.fpsTime=performance.now();this.displayFps=0;this.lastVisualSignature='';
     document.getElementById('loading').remove();this.log('v2.4起動。運行ロジック・着床・自動閉扉改善版');requestAnimationFrame(t=>this.loop(t));
   }
   createSimulation(){
     this.geometryConfig=new ElevatorGeometryConfig(this.config);this.building=new BuildingBuilder(this.sceneManager.scene,{floors:this.config.floors,floorHeight:this.config.floorHeight,geometryConfig:this.geometryConfig,floorService:this.config.floorService});
-    this.bank=new ElevatorBank(this.sceneManager.scene,this.building,this.geometryConfig,{config:this.config,audio:this.audio,log:t=>this.log(t)});this.dispatch=new DispatchController(this.bank);this.syncActiveUnit(this.bank.active);this.camera=new CameraController(this.sceneManager,this.building,this.car);this.camera.setHall(1);
+    this.bank=new ElevatorBank(this.sceneManager.scene,this.building,this.geometryConfig,{config:this.config,audio:this.audio,log:t=>this.log(t),shouldPlayArrival:(id,floor)=>this.shouldPlayArrival(id,floor)});this.dispatch=new DispatchController(this.bank);this.passengerRenderer=new PassengerRenderer(this.sceneManager.scene,this.building);this.passengers=new PassengerManager({bank:this.bank,building:this.building,dispatch:this.dispatch,config:this.config,renderer:this.passengerRenderer,log:t=>this.log(t)});this.automaticOperation=new AutomaticOperationController(this.passengers,this.passengerConfig);this.syncActiveUnit(this.bank.active);this.camera=new CameraController(this.sceneManager,this.building,this.car);this.camera.setHall(1);
   }
+  shouldPlayArrival(id,floor){return this.inside?this.bank?.activeId===id:Math.round(this.playerFloor)===Math.round(floor);}
   syncActiveUnit(unit){this.bank.setActive(unit.id);this.car=unit.car;this.doors=unit.doors;this.calls=unit.calls;this.elevator=unit.controller;if(this.camera)this.camera.car=this.car;}
   restoreDesignSettings(){const saved=this.settingsStore.load();if(!saved)return;if(saved.useOffice30)this.config.applyBuildingPreset('office30');else if(!this.config.restore(saved.data))this.config.reset();if(saved.migrated)this.saveDesignSettings();}
   saveDesignSettings(){this.settingsStore.save(this.config.snapshot());}
@@ -66,7 +71,7 @@ class ElevatorApp {
       }
     }
   }
-  destroySimulation(){if(this.bank)this.bank.dispose();if(this.building)this.building.dispose();}
+  destroySimulation(){if(this.passengers)this.passengers.dispose();if(this.bank)this.bank.dispose();if(this.building)this.building.dispose();}
   log(text){const el=document.getElementById('log'),time=new Date().toLocaleTimeString('ja-JP',{hour12:false});const lines=(`[${time}] ${text}\n`+el.textContent).split('\n').slice(0,40);el.textContent=lines.join('\n');}
   call(direction){this.audio.unlock();if(!this.config.isServed(this.playerFloor)){this.log(`${this.playerFloor}Fは通過階のため呼び出せません`);return;}this.audio.playCall();const id=this.dispatch.assign(this.playerFloor,direction);this.log(`${this.playerFloor}F ${direction==='up'?'上':'下'}呼び：自動判定で${id}号機を配車`);}
   canEnter(){return !this.inside&&!!this.bank.findBoardable(this.playerFloor);}
@@ -94,10 +99,10 @@ class ElevatorApp {
     if(now-this.lastRender<this.frameInterval)return;
     const elapsed=now-this.lastRender;this.lastRender=now-(elapsed%this.frameInterval);
     const dt=this.clock.tick(now);
-    const steps=Math.max(1,Math.min(12,Math.ceil(dt.sim/(1/60))));const step=dt.sim/steps;for(let i=0;i<steps;i++)this.bank.update(step);
+    const steps=Math.max(1,Math.min(12,Math.ceil(dt.sim/(1/60))));const step=dt.sim/steps;for(let i=0;i<steps;i++){this.automaticOperation.update(step);this.bank.update(step);this.passengers.update(step);}
     this.camera.update();this.audio.updateMotor(this.inside?this.elevator.velocity:0,this.inside?this.elevator.acceleration:0,this.inside?this.elevator.direction:0,this.config.motionPreset,this.config.maxSpeed,this.inside);for(const unit of this.bank.units.values()){unit.car.setTravelIndicator(unit.controller.position,unit.controller.direction);this.building.setTravelIndicator(unit.controller.position,unit.controller.direction,unit.id);}this.sync3DButtonLights();this.ui.update();
     const flashPhase=performance.now()<this.elevator.arrivalFlashUntil?Math.floor(performance.now()/250)%2:-1;
-    const bankSignature=[...this.bank.units.values()].map(u=>`${u.id}:${u.controller.position.toFixed(4)}:${u.doors.progress.toFixed(4)}:${u.controller.target}:${u.controller.arrivalFloor}`).join('|');const visualSignature=`${bankSignature}|${this.camera.mode}|${this.camera.floor}|${this.inside}|${flashPhase}|${this.building.materialLibrary.version}`;
+    const bankSignature=[...this.bank.units.values()].map(u=>`${u.id}:${u.controller.position.toFixed(4)}:${u.doors.progress.toFixed(4)}:${u.controller.target}:${u.controller.arrivalFloor}`).join('|');const visualSignature=`${bankSignature}|${this.camera.mode}|${this.camera.floor}|${this.inside}|${flashPhase}|${this.building.materialLibrary.version}|${this.passengerRenderer.version}`;
     if(this.sceneManager.needsRender||visualSignature!==this.lastVisualSignature){this.sceneManager.render(this.camera.camera);this.lastVisualSignature=visualSignature;this.fpsFrames++;}
     if(now-this.fpsTime>=1000){this.displayFps=Math.round(this.fpsFrames*1000/(now-this.fpsTime));this.fpsFrames=0;this.fpsTime=now;this.ui.updatePerformance();}
   }
