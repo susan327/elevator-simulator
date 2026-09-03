@@ -1,9 +1,61 @@
 export class PassengerManager {
-  constructor({bank,building,dispatch,config,renderer,log}){this.bank=bank;this.building=building;this.dispatch=dispatch;this.config=config;this.renderer=renderer;this.log=log;this.passengers=[];this.nextId=1;this.occupancy=new Map([...bank.units.keys()].map(id=>[id,0]));}
-  waitingAt(floor){return this.passengers.filter(p=>p.origin===floor&&(p.state==='waiting'||p.state==='boarding')).length;}
+  constructor({bank,building,dispatch,config,renderer,log,onNewHallCall=()=>{}}){
+    this.bank=bank;this.building=building;this.dispatch=dispatch;this.config=config;this.renderer=renderer;this.log=log;this.onNewHallCall=onNewHallCall;
+    this.passengers=[];this.nextId=1;this.riders=new Map([...bank.units.keys()].map(id=>[id,new Set()]));
+  }
+  waitingAt(floor){return this.passengers.filter(p=>p.origin===floor&&['waiting','approaching','boarding'].includes(p.state)).length;}
+  countIn(id){return this.riders.get(id)?.size||0;}
+  reservedFor(id){return this.passengers.filter(p=>p.assignedId===id&&p.state==='approaching').length;}
+  isFull(id){return this.countIn(id)>=this.config.capacity;}
   chooseTrip(pattern){const floors=this.building.floorService.servedNumbers;if(floors.length<2)return null;let origin,destination;const pick=items=>items[Math.floor(Math.random()*items.length)];if(pattern==='morning'&&Math.random()<.75){origin=floors[0];destination=pick(floors.slice(1));}else if(pattern==='evening'&&Math.random()<.75){origin=pick(floors.slice(1));destination=floors[0];}else{origin=pick(floors);destination=pick(floors.filter(f=>f!==origin));}return {origin,destination};}
-  spawn(pattern){const trip=this.chooseTrip(pattern);if(!trip||this.waitingAt(trip.origin)>=this.config.maxWaitingPerFloor)return false;const direction=trip.destination>trip.origin?'up':'down',assignedId=this.dispatch.assign(trip.origin,direction),passenger={id:this.nextId++,...trip,direction,assignedId,state:'waiting',elapsed:0};this.passengers.push(passenger);this.renderer.create(passenger,this.building.getShaftCenter(assignedId));this.log(`乗客${passenger.id}：${trip.origin}F→${trip.destination}F（${assignedId}号機待ち）`);return true;}
-  update(dt){for(const unit of this.bank.units.values())unit.doors.setObstructed(false);for(const p of this.passengers)if(p.state==='boarding'||p.state==='exiting')this.bank.get(p.assignedId)?.doors.setObstructed(true);for(const p of [...this.passengers]){const unit=this.bank.get(p.assignedId);if(!unit)continue;if(p.state==='waiting'){const count=this.occupancy.get(unit.id)||0;if(count<this.config.capacity&&Math.abs(unit.controller.position-p.origin)<.04&&unit.doors.isBoardable()){p.state='boarding';p.elapsed=0;this.occupancy.set(unit.id,count+1);unit.controller.extendDoorHold(2.2);this.renderer.beginBoarding(p,unit);}else if(count>=this.config.capacity){p.elapsed=(p.elapsed||0)+dt;if(p.elapsed>=2){unit.calls.cancel(p.origin,p.direction);p.assignedId=this.dispatch.assign(p.origin,p.direction,{excludeIds:[unit.id]});p.elapsed=0;this.renderer.reassignWaiting(p,this.bank.get(p.assignedId));this.log(`乗客${p.id}：${unit.id}号機満員のため${p.assignedId}号機を待ちます`);}}}else if(p.state==='boarding'){p.elapsed+=dt;this.renderer.updateTransition(p,Math.min(1,p.elapsed/1.25));if(p.elapsed>=1.25){p.state='riding';p.elapsed=0;this.renderer.board(p,unit,(this.occupancy.get(unit.id)||1)-1);unit.controller.request(p.destination,'car',{closeDoors:false});unit.controller.extendDoorHold(1.5);this.log(`乗客${p.id}：${unit.id}号機へ乗車・${p.destination}Fを登録`);}}else if(p.state==='riding'&&Math.abs(unit.controller.position-p.destination)<.04&&unit.doors.isBoardable()){p.state='exiting';p.elapsed=0;this.occupancy.set(unit.id,Math.max(0,(this.occupancy.get(unit.id)||1)-1));unit.controller.extendDoorHold(1.8);this.renderer.beginExit(p,unit);}else if(p.state==='exiting'){p.elapsed+=dt;this.renderer.updateTransition(p,Math.min(1,p.elapsed/1.35));if(p.elapsed>=1.35){this.renderer.remove(p);this.passengers.splice(this.passengers.indexOf(p),1);this.log(`乗客${p.id}：${p.destination}Fで降車`);}}}}
-  get stats(){return {waiting:this.passengers.filter(p=>p.state==='waiting'||p.state==='boarding').length,riding:this.passengers.filter(p=>p.state==='riding'||p.state==='exiting').length,total:this.passengers.length};}
-  dispose(){this.renderer.dispose();this.passengers=[];this.occupancy.clear();}
+  spawn(pattern){
+    const trip=this.chooseTrip(pattern);if(!trip||this.waitingAt(trip.origin)>=this.config.maxWaitingPerFloor)return false;
+    const direction=trip.destination>trip.origin?'up':'down',isNew=!this.dispatch.hasActiveCall(trip.origin,direction);
+    const assignedId=this.dispatch.assign(trip.origin,direction);if(isNew)this.onNewHallCall({floor:trip.origin,direction,source:'passenger'});
+    const passenger={id:this.nextId++,...trip,direction,assignedId,state:'waiting',elapsed:0};this.passengers.push(passenger);
+    this.renderer.create(passenger);this.layoutWaiting(trip.origin);this.log(`乗客${passenger.id}：${trip.origin}F→${trip.destination}F（共通待機列・${assignedId}号機応答予定）`);return true;
+  }
+  layoutWaiting(floor){this.renderer.layoutWaiting(this.passengers.filter(p=>p.origin===floor&&p.state==='waiting'));}
+  exitingAt(unit,floor){return this.passengers.some(p=>p.assignedId===unit.id&&p.state==='exiting'&&p.destination===floor);}
+  beginExits(){
+    for(const p of this.passengers){
+      if(p.state!=='riding')continue;const unit=this.bank.get(p.assignedId);if(!unit)continue;
+      if(Math.abs(unit.controller.position-p.destination)<.04&&unit.doors.isBoardable()){
+        p.state='exiting';p.elapsed=0;this.riders.get(unit.id)?.delete(p.id);unit.controller.extendDoorHold(2.2);this.renderer.beginExit(p,unit);this.renderer.layoutRiders(unit,this.riders.get(unit.id));
+      }
+    }
+  }
+  beginApproaches(){
+    for(const unit of this.bank.units.values()){
+      const floor=Math.round(unit.controller.position);if(!unit.doors.isBoardable()||Math.abs(unit.controller.position-floor)>=.04||this.exitingAt(unit,floor))continue;
+      const candidates=this.passengers.filter(p=>p.state==='waiting'&&p.origin===floor&&this.dispatch.assignedTo(floor,p.direction)===unit.id);
+      let available=Math.max(0,this.config.capacity-this.countIn(unit.id)-this.reservedFor(unit.id));
+      candidates.forEach((p,index)=>{p.assignedId=unit.id;if(available<=0)return;p.state='approaching';p.elapsed=-index*.32;this.renderer.beginApproach(p,unit,index);unit.controller.extendDoorHold(2.5+index*.32);available--;});
+      if(candidates.length>available&&this.countIn(unit.id)+this.reservedFor(unit.id)>=this.config.capacity)this.reassignOverflow(unit,floor,candidates.filter(p=>p.state==='waiting'));
+    }
+  }
+  reassignOverflow(unit,floor,passengers){
+    for(const p of passengers){unit.calls.cancel(floor,p.direction);p.assignedId=this.dispatch.assign(floor,p.direction,{excludeIds:[unit.id]});this.renderer.returnToQueue(p);this.log(`乗客${p.id}：${unit.id}号機満員（${this.countIn(unit.id)}/${this.config.capacity}人）のため${p.assignedId}号機を待ちます`);}
+    if(passengers.length)this.layoutWaiting(floor);
+  }
+  update(dt){
+    for(const unit of this.bank.units.values())unit.doors.setObstructed(false);
+    this.beginExits();this.beginApproaches();
+    for(const p of [...this.passengers]){
+      const unit=this.bank.get(p.assignedId);if(!unit)continue;
+      if(['approaching','boarding','exiting'].includes(p.state))unit.doors.setObstructed(true);
+      if(p.state==='approaching'){
+        p.elapsed+=dt;if(p.elapsed<0)continue;this.renderer.updateTransition(p,Math.min(1,p.elapsed/.9));
+        if(p.elapsed>=.9){p.state='boarding';p.elapsed=0;this.riders.get(unit.id).add(p.id);this.renderer.beginBoarding(p,unit);this.layoutWaiting(p.origin);}
+      }else if(p.state==='boarding'){
+        p.elapsed+=dt;this.renderer.updateTransition(p,Math.min(1,p.elapsed/1.05));
+        if(p.elapsed>=1.05){p.state='riding';p.elapsed=0;this.renderer.board(p,unit,this.riders.get(unit.id));unit.controller.request(p.destination,'car',{closeDoors:false});unit.controller.extendDoorHold(1.5);this.log(`乗客${p.id}：${unit.id}号機へ乗車（${this.countIn(unit.id)}/${this.config.capacity}人）・${p.destination}Fを登録`);}
+      }else if(p.state==='exiting'){
+        p.elapsed+=dt;this.renderer.updateTransition(p,Math.min(1,p.elapsed/1.45));
+        if(p.elapsed>=1.45){this.renderer.remove(p);this.passengers.splice(this.passengers.indexOf(p),1);this.log(`乗客${p.id}：${p.destination}Fへ歩いて降車（${unit.id}号機 ${this.countIn(unit.id)}/${this.config.capacity}人）`);}
+      }
+    }
+  }
+  get stats(){const cars=Object.fromEntries([...this.bank.units.keys()].map(id=>[id,{count:this.countIn(id),capacity:this.config.capacity,full:this.isFull(id)}]));return {waiting:this.passengers.filter(p=>p.state==='waiting'||p.state==='approaching').length,boarding:this.passengers.filter(p=>p.state==='boarding'||p.state==='exiting').length,riding:[...this.riders.values()].reduce((sum,ids)=>sum+ids.size,0),total:this.passengers.length,cars};}
+  dispose(){this.renderer.dispose();this.passengers=[];this.riders.clear();}
 }

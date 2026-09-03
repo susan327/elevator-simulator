@@ -27,9 +27,10 @@ class ElevatorApp {
   }
   createSimulation(){
     this.geometryConfig=new ElevatorGeometryConfig(this.config);this.building=new BuildingBuilder(this.sceneManager.scene,{floors:this.config.floors,floorHeight:this.config.floorHeight,geometryConfig:this.geometryConfig,floorService:this.config.floorService});
-    this.bank=new ElevatorBank(this.sceneManager.scene,this.building,this.geometryConfig,{config:this.config,audio:this.audio,log:t=>this.log(t),shouldPlayArrival:(id,floor)=>this.shouldPlayArrival(id,floor)});this.dispatch=new DispatchController(this.bank);this.passengerRenderer=new PassengerRenderer(this.sceneManager.scene,this.building);this.passengers=new PassengerManager({bank:this.bank,building:this.building,dispatch:this.dispatch,config:this.config,renderer:this.passengerRenderer,log:t=>this.log(t)});this.automaticOperation=new AutomaticOperationController(this.passengers,this.passengerConfig);this.syncActiveUnit(this.bank.active);this.camera=new CameraController(this.sceneManager,this.building,this.car);this.camera.setHall(1);
+    this.bank=new ElevatorBank(this.sceneManager.scene,this.building,this.geometryConfig,{config:this.config,audio:this.audio,log:t=>this.log(t),shouldPlayArrival:(id,floor)=>this.shouldPlayArrival(id,floor)});this.dispatch=new DispatchController(this.bank);this.passengerRenderer=new PassengerRenderer(this.sceneManager.scene,this.building);this.passengers=new PassengerManager({bank:this.bank,building:this.building,dispatch:this.dispatch,config:this.config,renderer:this.passengerRenderer,log:t=>this.log(t),onNewHallCall:call=>this.playPassengerHallCall(call)});this.automaticOperation=new AutomaticOperationController(this.passengers,this.passengerConfig);this.syncActiveUnit(this.bank.active);this.camera=new CameraController(this.sceneManager,this.building,this.car);this.camera.setHall(1);
   }
   shouldPlayArrival(id,floor){return this.inside?this.bank?.activeId===id:Math.round(this.playerFloor)===Math.round(floor);}
+  playPassengerHallCall({floor}){if(this.inside||Math.round(this.playerFloor)!==Math.round(floor))return false;this.audio.unlock();this.audio.playCall();return true;}
   syncActiveUnit(unit){this.bank.setActive(unit.id);this.car=unit.car;this.doors=unit.doors;this.calls=unit.calls;this.elevator=unit.controller;if(this.camera)this.camera.car=this.car;}
   restoreDesignSettings(){const saved=this.settingsStore.load();if(!saved)return;if(saved.useOffice30)this.config.applyBuildingPreset('office30');else if(!this.config.restore(saved.data))this.config.reset();if(saved.migrated)this.saveDesignSettings();}
   saveDesignSettings(){this.settingsStore.save(this.config.snapshot());}
@@ -62,18 +63,20 @@ class ElevatorApp {
       const f=this.playerFloor,now=performance.now(),blinkOn=Math.floor(now/250)%2===0;
       for(const direction of ['up','down']){
         const assignedId=this.dispatch.assignedTo(f,direction);
+        const assigned=assignedId?this.bank.get(assignedId):null,assignedElevator=assigned?.controller;
+        const queued=!!assignedElevator&&(assignedElevator.target===f||assignedElevator.calls.queue.some(x=>x.floor===f&&x.direction===direction));
+        const sameFloor=!!assignedElevator&&assignedElevator.state==='SAME_FLOOR_RESPONSE'&&Math.round(assignedElevator.position)===f&&assignedElevator.sameFloorDirection===(direction==='up'?1:-1);
+        const arrivalActive=!!assignedElevator&&assignedElevator.arrivalFloor===f&&now<assignedElevator.arrivalFlashUntil&&assignedElevator.arrivalDirection===(direction==='up'?1:-1);
+        const sharedActive=queued||sameFloor||arrivalActive;
         for(const unit of this.bank.units.values()){
-          const e=unit.controller,arrivalActive=assignedId===unit.id&&e.arrivalFloor===f&&now<e.arrivalFlashUntil;
-          const queued=assignedId===unit.id&&(e.target===f||e.calls.queue.some(x=>x.floor===f&&x.direction===direction));
-          const sameFloor=assignedId===unit.id&&e.state==='SAME_FLOOR_RESPONSE'&&Math.round(e.position)===f&&e.sameFloorDirection===(direction==='up'?1:-1);
-          const arriving=arrivalActive&&e.arrivalDirection===(direction==='up'?1:-1);this.building.setHallCallLight(f,direction,arriving?blinkOn:(queued||sameFloor),arriving,unit.id);
+          const arriving=arrivalActive&&assignedId===unit.id;this.building.setHallCallLight(f,direction,arriving?blinkOn:sharedActive,arriving,unit.id);
         }
       }
     }
   }
   destroySimulation(){if(this.passengers)this.passengers.dispose();if(this.bank)this.bank.dispose();if(this.building)this.building.dispose();}
   log(text){const el=document.getElementById('log'),time=new Date().toLocaleTimeString('ja-JP',{hour12:false});const lines=(`[${time}] ${text}\n`+el.textContent).split('\n').slice(0,40);el.textContent=lines.join('\n');}
-  call(direction){this.audio.unlock();if(!this.config.isServed(this.playerFloor)){this.log(`${this.playerFloor}Fは通過階のため呼び出せません`);return;}this.audio.playCall();const id=this.dispatch.assign(this.playerFloor,direction);this.log(`${this.playerFloor}F ${direction==='up'?'上':'下'}呼び：自動判定で${id}号機を配車`);}
+  call(direction){this.audio.unlock();if(!this.config.isServed(this.playerFloor)){this.log(`${this.playerFloor}Fは通過階のため呼び出せません`);return;}const isNew=!this.dispatch.hasActiveCall(this.playerFloor,direction);const id=this.dispatch.assign(this.playerFloor,direction);if(isNew)this.audio.playCall();this.log(isNew?`${this.playerFloor}F ${direction==='up'?'上':'下'}呼び：自動判定で${id}号機を配車`:`${this.playerFloor}F ${direction==='up'?'上':'下'}呼び：受付済み（${id}号機）`);}
   canEnter(){return !this.inside&&!!this.bank.findBoardable(this.playerFloor);}
   enter(){this.audio.unlock();const unit=this.bank.findBoardable(this.playerFloor);if(!unit){this.log('まだ乗車できません。停止とドア開を待ってください');return;}this.syncActiveUnit(unit);this.inside=true;this.camera.setCabin();this.boardingCloseTimer=null;this.elevator.extendDoorHold(3.0);this.log(`${this.playerFloor}Fから${unit.id}号機へ乗車`);}
   exit(){if(!this.inside||!this.doors.isBoardable())return;this.playerFloor=Math.round(this.elevator.position);this.inside=false;this.boardingCloseTimer=null;this.camera.setHall(this.playerFloor);this.log(`${this.playerFloor}Fで降車`);}
