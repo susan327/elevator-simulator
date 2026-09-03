@@ -13,6 +13,8 @@ body.panel-open #panel{transform:translateX(0)}
 #panelBackdrop{position:fixed;z-index:70;inset:0;background:#02050a99;opacity:0;pointer-events:none;transition:opacity .24s ease}
 body.panel-open #panelBackdrop{opacity:1;pointer-events:auto}
 #panelToggle{position:fixed;z-index:90;right:max(18px,env(safe-area-inset-right));bottom:max(18px,env(safe-area-inset-bottom));width:52px;height:52px;padding:0;border-radius:50%;background:#173b50dd;border-color:#61d2ff;font-size:24px;box-shadow:0 8px 28px #0009}
+#viewport>#panelToggle{position:absolute;top:82px;right:14px;bottom:auto}
+body.panel-open #viewport>#panelToggle{display:none}
 body.panel-open #panelToggle{right:414px}
 .panel-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
 #panelClose{width:40px;height:40px;padding:0;font-size:25px;line-height:1}
@@ -62,3 +64,21 @@ html,body{height:100%;min-height:0}#previewStage{height:100%;min-height:0;max-he
 #portraitHallControls{display:none;position:absolute;z-index:27;left:50%;bottom:74px;transform:translateX(-50%);gap:10px;width:min(280px,calc(100% - 24px));pointer-events:auto}.portrait-hall-panel{display:grid;grid-template-columns:1fr 1fr;gap:6px;flex:1;padding:8px;border:1px solid #596168;border-radius:8px;background:linear-gradient(145deg,#292f34,#0d1013);box-shadow:inset 1px 1px 2px #ffffff1c,0 8px 22px #000b}.portrait-hall-panel strong{grid-column:1/-1;text-align:center;font-size:12px;color:#e9d48d}.portrait-hall-panel button{min-height:44px;padding:5px;border-radius:4px;background:linear-gradient(145deg,#eef2f3,#858e93);color:#10171c;font-weight:900;box-shadow:inset 1px 1px 1px #fff9,inset -2px -2px 3px #30363a88}.portrait-hall-panel button.active{border-color:#75dcff;background:linear-gradient(145deg,#b9f0ff,#55bdda 55%,#29748d);box-shadow:0 0 13px #61d2ffaa}.portrait-hall-panel button.arriving{animation:hall-arrival-blink .5s steps(1,end) infinite}@keyframes hall-arrival-blink{50%{background:#ffd15c;box-shadow:0 0 18px #ffbd2e}}
 @media (max-width:900px) and (orientation:portrait){#portraitHallControls:not([hidden]){display:flex}}body.preview-tablet-portrait #portraitHallControls:not([hidden]),body.preview-mobile #portraitHallControls:not([hidden]){display:flex}
 .simulation-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:9px}.simulation-grid label{display:grid;gap:4px;color:var(--muted);font-size:11px}.simulation-grid label:last-child{grid-column:1/-1}.simulation-grid select{width:100%;padding:7px;border:1px solid #4b5e73;border-radius:7px;background:#0b131e;color:var(--text)}.passenger-settings #autoOperationToggle.active{background:#235f48;border-color:#72dda7}.passenger-status{margin-top:8px;padding:7px;border-radius:7px;background:#09131d;color:#9fd9ef;font-size:12px;text-align:center}
+/* 縦画面の待機中は、号機別呼出パネルと乗車ボタンを上下に分離する。 */
+@media (max-width:900px) and (orientation:portrait){#portraitHallControls:not([hidden]){bottom:max(124px,calc(env(safe-area-inset-bottom) + 112px))}.quick-actions{bottom:max(12px,env(safe-area-inset-bottom));width:min(230px,calc(100% - 120px))}}
+body.preview-tablet-portrait #portraitHallControls:not([hidden]),body.preview-mobile #portraitHallControls:not([hidden]){bottom:max(124px,calc(env(safe-area-inset-bottom) + 112px))}
+/* 縦画面共通の操作帯。文字量が変わっても、HUD・呼出・主操作を重ねない。 */
+@media (max-width:900px) and (orientation:portrait){
+  .perf{display:none}
+  .quick-actions{left:50%;bottom:max(14px,env(safe-area-inset-bottom));width:min(360px,calc(100% - 24px))}
+  #portraitHallControls:not([hidden]){bottom:max(132px,calc(env(safe-area-inset-bottom) + 120px))}
+  #panelToggle{top:max(106px,calc(env(safe-area-inset-top) + 96px));right:10px;bottom:auto}
+  #portraitFloorToggle{bottom:max(76px,calc(env(safe-area-inset-bottom) + 64px))}
+}
+body.preview-tablet-portrait .perf,body.preview-mobile .perf{display:none!important}
+body.preview-tablet-portrait .quick-actions,body.preview-mobile .quick-actions{width:min(360px,calc(100% - 24px))!important;bottom:max(14px,env(safe-area-inset-bottom))!important}
+body.preview-tablet-portrait #portraitHallControls:not([hidden]),body.preview-mobile #portraitHallControls:not([hidden]){bottom:max(132px,calc(env(safe-area-inset-bottom) + 120px))!important}
+body.preview-tablet-portrait #panelToggle,body.preview-mobile #panelToggle{top:max(106px,calc(env(safe-area-inset-top) + 96px))!important;right:10px!important;bottom:auto!important}
+/* 徒歩開始は待機メッセージ直上の専用段へ置く。 */
+@media (max-width:900px) and (orientation:portrait){body #viewport .walk-toggle{top:auto!important;right:14px!important;bottom:max(76px,calc(env(safe-area-inset-bottom) + 68px))!important}}
+body.preview-tablet-portrait #viewport .walk-toggle,body.preview-mobile #viewport .walk-toggle{top:auto!important;right:14px!important;bottom:max(76px,calc(env(safe-area-inset-bottom) + 68px))!important}

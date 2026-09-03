@@ -14,7 +14,9 @@ export class FloorLayoutCatalog {
     const names=this.roomNames(profile),isEntrance=profile.zone==='ENTRANCE';
     return {
       id:`${template}-${floor}f`,template,floor,
-      spawn:{x:0,y:0,z:isEntrance?8.7:5.15,rotation:Math.PI},
+      // 歩行開始地点は必ず共用廊下内に置く。入口の演出物の奥から始めると
+      // 歩行可能エリア外になり、衝突判定で最初の一歩が止まってしまう。
+      spawn:{x:0,y:0,z:5.15,rotation:Math.PI},
       walkable:[
         {id:'elevator-lobby',label:'エレベーターロビー',kind:'lobby',bounds:{minX:-5.35,maxX:5.35,minZ:1.72,maxZ:4.35}},
         {id:'main-corridor',label:'共用廊下',kind:'corridor',bounds:{minX:-5.35,maxX:5.35,minZ:4.35,maxZ:7.15}},

@@ -5,6 +5,7 @@ import { DesignSettingsStore } from './config/DesignSettingsStore.js';
 import { SimulationClock } from './core/SimulationClock.js';
 import { SceneManager } from './core/SceneManager.js';
 import { CameraController } from './core/CameraController.js';
+import { WalkController } from './core/WalkController.js';
 import { BuildingBuilder } from './world/BuildingBuilder.js';
 import { ElevatorGeometryConfig } from './elevator/ElevatorGeometryConfig.js';
 import { ElevatorBank } from './elevator/ElevatorBank.js';
@@ -27,7 +28,7 @@ class ElevatorApp {
   }
   createSimulation(){
     this.geometryConfig=new ElevatorGeometryConfig(this.config);this.building=new BuildingBuilder(this.sceneManager.scene,{floors:this.config.floors,floorHeight:this.config.floorHeight,geometryConfig:this.geometryConfig,floorService:this.config.floorService});
-    this.bank=new ElevatorBank(this.sceneManager.scene,this.building,this.geometryConfig,{config:this.config,audio:this.audio,log:t=>this.log(t),shouldPlayArrival:(id,floor)=>this.shouldPlayArrival(id,floor)});this.dispatch=new DispatchController(this.bank);this.passengerRenderer=new PassengerRenderer(this.sceneManager.scene,this.building);this.passengers=new PassengerManager({bank:this.bank,building:this.building,dispatch:this.dispatch,config:this.config,renderer:this.passengerRenderer,log:t=>this.log(t),onNewHallCall:call=>this.playPassengerHallCall(call)});this.automaticOperation=new AutomaticOperationController(this.passengers,this.passengerConfig);this.syncActiveUnit(this.bank.active);this.camera=new CameraController(this.sceneManager,this.building,this.car);this.camera.setHall(1);
+    this.bank=new ElevatorBank(this.sceneManager.scene,this.building,this.geometryConfig,{config:this.config,audio:this.audio,log:t=>this.log(t),shouldPlayArrival:(id,floor)=>this.shouldPlayArrival(id,floor)});this.dispatch=new DispatchController(this.bank);this.passengerRenderer=new PassengerRenderer(this.sceneManager.scene,this.building);this.passengers=new PassengerManager({bank:this.bank,building:this.building,dispatch:this.dispatch,config:this.config,renderer:this.passengerRenderer,log:t=>this.log(t),onNewHallCall:call=>this.playPassengerHallCall(call)});this.automaticOperation=new AutomaticOperationController(this.passengers,this.passengerConfig);this.syncActiveUnit(this.bank.active);this.camera=new CameraController(this.sceneManager,this.building,this.car);this.camera.setHall(1);this.walker=new WalkController({app:this,viewport:document.getElementById('viewport')});
   }
   shouldPlayArrival(id,floor){return this.inside?this.bank?.activeId===id:Math.round(this.playerFloor)===Math.round(floor);}
   playPassengerHallCall({floor}){if(this.inside||Math.round(this.playerFloor)!==Math.round(floor))return false;this.audio.unlock();this.audio.playCall();return true;}
@@ -37,10 +38,11 @@ class ElevatorApp {
   bind3DInput(){
     const viewport=document.getElementById('viewport');
     viewport.addEventListener('pointerdown',event=>{
+      if(this.walker?.active){this.walker.handleViewportPointer(event);return;}
       this.audio.unlock();const rect=viewport.getBoundingClientRect();this.pointer.x=((event.clientX-rect.left)/rect.width)*2-1;this.pointer.y=-((event.clientY-rect.top)/rect.height)*2+1;
       this.raycaster.setFromCamera(this.pointer,this.camera.camera);
       const objects=this.inside?(this.car.interactiveObjects||[]):(this.building.interactiveObjects||[]);
-      const hit=this.raycaster.intersectObjects(objects,false)[0];if(hit?.object?.userData?.interaction){this.press3DButton(hit.object);this.handle3DInteraction(hit.object.userData.interaction);}
+      const hit=this.raycaster.intersectObjects(objects,false)[0];if(hit?.object?.userData?.interaction){if(hit.object.userData.interaction.type!=='hallFocus')this.press3DButton(hit.object);this.handle3DInteraction(hit.object.userData.interaction);}
     });
   }
   press3DButton(button){
@@ -49,6 +51,7 @@ class ElevatorApp {
     data.pressTimer=setTimeout(()=>{button.position.z=data.restZ;if(label)label.position.z=data.labelRestZ;this.sceneManager.needsRender=true;},140);
   }
   handle3DInteraction(action){
+    if(action.type==='hallFocus'){const focused=this.camera.toggleHallFocus(action.elevatorId);this.log(focused?`${action.elevatorId}号機を拡大表示。同じ案内板をタップすると全体表示へ戻ります`:'2台の全体表示へ戻しました');return;}
     if(action.type==='hallCall'){
       if(Number(action.floor)!==this.playerFloor){this.playerFloor=Number(action.floor);this.camera.setHall(this.playerFloor);}
       this.call(action.direction,action.elevatorId);return;
@@ -81,11 +84,11 @@ class ElevatorApp {
       }
     }
   }
-  destroySimulation(){if(this.passengers)this.passengers.dispose();if(this.bank)this.bank.dispose();if(this.building)this.building.dispose();}
+  destroySimulation(){if(this.walker)this.walker.dispose();if(this.passengers)this.passengers.dispose();if(this.bank)this.bank.dispose();if(this.building)this.building.dispose();}
   log(text){const el=document.getElementById('log'),time=new Date().toLocaleTimeString('ja-JP',{hour12:false});const lines=(`[${time}] ${text}\n`+el.textContent).split('\n').slice(0,40);el.textContent=lines.join('\n');}
   call(direction,elevatorId=null){this.audio.unlock();const zoned=this.config.hasDistinctServiceZones(),requestedId=zoned?elevatorId:null;if(requestedId&&!this.config.isServed(this.playerFloor,requestedId)){this.log(`${requestedId}号機は${this.playerFloor}Fに停止しません`);return;}if(!this.config.isServed(this.playerFloor)){this.log(`${this.playerFloor}Fは通過階のため呼び出せません`);return;}const isNew=requestedId?!this.dispatch.isUnitCallActive(requestedId,this.playerFloor,direction):!this.dispatch.hasActiveCall(this.playerFloor,direction);const id=requestedId?this.dispatch.assignTo(requestedId,this.playerFloor,direction):this.dispatch.assign(this.playerFloor,direction);if(isNew)this.audio.playCall();const mode=requestedId?`${id}号機を指定`:`自動判定で${id}号機を配車`;this.log(isNew?`${this.playerFloor}F ${direction==='up'?'上':'下'}呼び：${mode}`:`${this.playerFloor}F ${direction==='up'?'上':'下'}呼び：${id}号機で受付済み`);}
-  canEnter(){return !this.inside&&!!this.bank.findBoardable(this.playerFloor);}
-  enter(){this.audio.unlock();const unit=this.bank.findBoardable(this.playerFloor);if(!unit){this.log('まだ乗車できません。停止とドア開を待ってください');return;}this.syncActiveUnit(unit);this.inside=true;this.camera.setCabin();this.boardingCloseTimer=null;this.elevator.extendDoorHold(3.0);this.log(`${this.playerFloor}Fから${unit.id}号機へ乗車`);}
+  canEnter(){const unit=this.bank.findBoardable(this.playerFloor);return !this.inside&&!!unit&&this.walker.canBoard(unit.id);}
+  enter(){this.audio.unlock();const unit=this.bank.findBoardable(this.playerFloor);if(!unit){this.log('まだ乗車できません。停止とドア開を待ってください');return;}if(!this.walker.canBoard(unit.id)){this.log(`${unit.id}号機の前まで歩いてから乗車してください`);return;}this.walker.deactivate();this.syncActiveUnit(unit);this.inside=true;this.camera.setCabin();this.boardingCloseTimer=null;this.elevator.extendDoorHold(3.0);this.log(`${this.playerFloor}Fから${unit.id}号機へ乗車`);}
   exit(){if(!this.inside||!this.doors.isBoardable())return;this.playerFloor=Math.round(this.elevator.position);this.inside=false;this.boardingCloseTimer=null;this.camera.setHall(this.playerFloor);this.log(`${this.playerFloor}Fで降車`);}
   selectFloor(floor){this.audio.unlock();if(!this.inside)return;if(!this.config.isServed(floor,this.bank.activeId)){this.log(`${floor}Fは${this.bank.activeId}号機の通過階です`);return;}this.boardingCloseTimer=null;this.elevator.request(floor,'car');this.doors.close();this.elevator.state='DOOR';this.log(`かご呼び ${floor}F`);}
   openDoor(){if(this.inside&&Math.abs(this.elevator.position-Math.round(this.elevator.position))<.08&&this.elevator.commandOpen())this.log('開ボタン・保持時間延長');}
@@ -110,9 +113,9 @@ class ElevatorApp {
     const elapsed=now-this.lastRender;this.lastRender=now-(elapsed%this.frameInterval);
     const dt=this.clock.tick(now);
     const steps=Math.max(1,Math.min(12,Math.ceil(dt.sim/(1/60))));const step=dt.sim/steps;for(let i=0;i<steps;i++){this.automaticOperation.update(step);this.bank.update(step);this.passengers.update(step);}
-    this.camera.update();this.audio.updateMotor(this.inside?this.elevator.velocity:0,this.inside?this.elevator.acceleration:0,this.inside?this.elevator.direction:0,this.config.motionPreset,this.config.maxSpeed,this.inside);for(const unit of this.bank.units.values()){unit.car.setTravelIndicator(unit.controller.position,unit.controller.direction);this.building.setTravelIndicator(unit.controller.position,unit.controller.direction,unit.id);}this.sync3DButtonLights();this.ui.update();
+    this.walker?.update(dt.sim);this.camera.update();this.audio.updateMotor(this.inside?this.elevator.velocity:0,this.inside?this.elevator.acceleration:0,this.inside?this.elevator.direction:0,this.config.motionPreset,this.config.maxSpeed,this.inside);for(const unit of this.bank.units.values()){unit.car.setTravelIndicator(unit.controller.position,unit.controller.direction);this.building.setTravelIndicator(unit.controller.position,unit.controller.direction,unit.id);}this.sync3DButtonLights();this.ui.update();
     const flashPhase=performance.now()<this.elevator.arrivalFlashUntil?Math.floor(performance.now()/250)%2:-1;
-    const bankSignature=[...this.bank.units.values()].map(u=>`${u.id}:${u.controller.position.toFixed(4)}:${u.doors.progress.toFixed(4)}:${u.controller.target}:${u.controller.arrivalFloor}`).join('|');const visualSignature=`${bankSignature}|${this.camera.mode}|${this.camera.floor}|${this.inside}|${flashPhase}|${this.building.materialLibrary.version}|${this.passengerRenderer.version}`;
+    const bankSignature=[...this.bank.units.values()].map(u=>`${u.id}:${u.controller.position.toFixed(4)}:${u.doors.progress.toFixed(4)}:${u.controller.target}:${u.controller.arrivalFloor}`).join('|');const walkSignature=this.walker?.active?`${this.walker.position.x.toFixed(2)}:${this.walker.position.z.toFixed(2)}:${this.walker.yaw.toFixed(2)}`:'off',hallFocus=this.camera.hallFocus||'all';const visualSignature=`${bankSignature}|${this.camera.mode}|${this.camera.floor}|${hallFocus}|${this.inside}|${flashPhase}|${walkSignature}|${this.building.materialLibrary.version}|${this.passengerRenderer.version}`;
     if(this.sceneManager.needsRender||visualSignature!==this.lastVisualSignature){this.sceneManager.render(this.camera.camera);this.lastVisualSignature=visualSignature;this.fpsFrames++;}
     if(now-this.fpsTime>=1000){this.displayFps=Math.round(this.fpsFrames*1000/(now-this.fpsTime));this.fpsFrames=0;this.fpsTime=now;this.ui.updatePerformance();}
   }
