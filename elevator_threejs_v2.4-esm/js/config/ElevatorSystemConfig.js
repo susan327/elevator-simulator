@@ -1,5 +1,6 @@
 import { FloorServiceConfig } from './FloorServiceConfig.js';
 import { ControlPanelLayout } from '../elevator/ControlPanelLayout.js';
+import { BuildingTemplateCatalog } from './BuildingTemplateCatalog.js';
 
 export class ElevatorSystemConfig {
   constructor(){
@@ -20,7 +21,7 @@ export class ElevatorSystemConfig {
   reset(){this.floors=this.defaults.floors;this.floorHeight=this.defaults.floorHeight;this.buildingPreset=this.defaults.buildingPreset;this.applyCabinPreset(this.defaults.cabinPreset);this.applyMotionPreset(this.defaults.motionPreset);this.setupFloorServices();this.applyZonedServiceDefaults();}
   setupFloorServices(){if(!this.floorService)this.floorService=new FloorServiceConfig(this.floors,this.floorHeight);else this.floorService.updateBuilding(this.floors,this.floorHeight);this.floorService.applyPreset('all');if(!this.unitFloorServices)this.unitFloorServices={A:new FloorServiceConfig(this.floors,this.floorHeight,{requireTerminals:false}),B:new FloorServiceConfig(this.floors,this.floorHeight,{requireTerminals:false})};else for(const service of Object.values(this.unitFloorServices))service.updateBuilding(this.floors,this.floorHeight);}
   applyZonedServiceDefaults(){const transfer=Math.min(15,this.floors),a=`1-${transfer}`,b=this.floors>transfer?`1,2,${transfer}-${this.floors}`:`1-${this.floors}`;this.applyUnitServiceExpression('A',a);this.applyUnitServiceExpression('B',b);}
-  applyBuildingPreset(key){if(key!=='office30')return false;this.floors=30;this.floorHeight=3.60;this.buildingPreset=key;this.applyCabinPreset('medium');this.applyMotionPreset('high');this.setupFloorServices();this.applyZonedServiceDefaults();return true;}
+  applyBuildingPreset(key){const preset=BuildingTemplateCatalog.definitions[key];if(!preset)return false;this.floors=preset.floors;this.floorHeight=preset.floorHeight;this.buildingPreset=key;this.applyCabinPreset(key==='ryokan'?'small':key==='hospital'?'large':'medium');this.applyMotionPreset(this.floors<=8?'low':this.floors<=20?'medium':'high');this.setupFloorServices();for(const id of ['A','B'])this.applyUnitServiceExpression(id,preset.services[id]);return true;}
   applyCabinPreset(key){const p=this.cabinPresets[key];if(!p)return false;this.cabinPreset=key;Object.assign(this,p);return true;}
   applyMotionPreset(key){const p=this.motionPresets[key];if(!p)return false;this.motionPreset=key;Object.assign(this,p);this.jerk=this.decelJerk;return true;}
   set(key,value){
@@ -61,7 +62,7 @@ export class ElevatorSystemConfig {
     const keys=['floors','floorHeight','carWidth','carDepth','carHeight','doorWidth','doorHeight','windowWidth','windowHeight','windowTopMargin','maxSpeed','acceleration','deceleration','accelJerk','decelJerk','landingSpeed','landingDistance'];
     for(const key of keys)if(Number.isFinite(Number(saved[key])))this.set(key,Number(saved[key]));
     if(Array.isArray(saved.servedFloors))this.applyServiceExpression(saved.servedFloors.join(','));if(saved.unitServedFloors)for(const id of ['A','B'])if(Array.isArray(saved.unitServedFloors[id]))this.applyUnitServiceExpression(id,saved.unitServedFloors[id].join(','));
-    this.buildingPreset=saved.buildingPreset==='office30'&&this.floors===30&&this.floorHeight===3.6?'office30':'custom';this.cabinPreset=this.cabinPresets[saved.cabinPreset]?saved.cabinPreset:'custom';this.motionPreset=this.motionPresets[saved.motionPreset]?saved.motionPreset:'custom';return this.validate().ok;
+    this.buildingPreset=BuildingTemplateCatalog.definitions[saved.buildingPreset]?saved.buildingPreset:'custom';this.cabinPreset=this.cabinPresets[saved.cabinPreset]?saved.cabinPreset:'custom';this.motionPreset=this.motionPresets[saved.motionPreset]?saved.motionPreset:'custom';return this.validate().ok;
   }
   isServed(floor,id=null){if(id)return !!this.unitFloorServices?.[id]?.isServed(Number(floor));return ['A','B'].some(unitId=>this.unitFloorServices?.[unitId]?.isServed(Number(floor)));}
   servedFloorsFor(id){return this.unitFloorServices?.[id]?.servedNumbers||[];}

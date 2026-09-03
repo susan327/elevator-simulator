@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#07101a">
+  <title>Floor Directory | Elevator Simulator</title>
+  <link rel="stylesheet" href="./floor-directory.css">
+  <link rel="stylesheet" href="./floor-directory-controls.css">
+</head>
+<body>
+  <header class="topbar"><a href="./">← ホーム</a><div><strong>Floor Directory</strong><span>30F MIXED-USE BUILDING</span></div><a class="launch" href="./app/">3Dを起動</a></header>
+  <main>
+    <section class="hero"><p class="eyebrow">BUILDING INFORMATION</p><h1>フロア一覧</h1><p>施設用途とエレベーター運行を一つの建物データとして確認できる。将来の館内歩行では、この情報を目的地案内と経路探索に使う予定。</p><div class="legend"><span><i class="a"></i>A号機・低層</span><span><i class="b"></i>B号機・高層</span><span><i class="transfer"></i>乗換階</span></div></section>
+    <div class="directory-controls"><label>建物テンプレート<select id="templateSelect"></select></label><nav class="filters" aria-label="フロア絞り込み"><button class="active" data-zone="all">すべて</button><button data-zone="MEDICAL">医療</button><button data-zone="OFFICE">オフィス</button><button data-zone="TRANSFER">乗換</button><button data-zone="HOTEL">ホテル・旅館</button><button data-zone="DINING">飲食・商業</button></nav></div>
+    <section class="summary" id="summary"></section>
+    <section class="floors" id="floors" aria-live="polite"></section>
+  </main>
+  <script type="module" src="./floor-directory.js"></script>
+</body>
+</html>

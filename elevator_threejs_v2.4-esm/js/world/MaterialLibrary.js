@@ -9,6 +9,9 @@ export class MaterialLibrary {
       designTerrazzo:{url:new URL('../../assets/textures/design-terrazzo.jpg',import.meta.url).href,repeat:[4,3],roughness:.84,metalness:.01},
       executiveOak:{url:new URL('../../assets/textures/executive-oak.jpg',import.meta.url).href,repeat:[3,3],roughness:.66,metalness:.01},
       cityBlueHour:{url:new URL('../../assets/textures/city-blue-hour.jpg',import.meta.url).href,repeat:[1,1],unlit:true}
+      ,medicalVinyl:{url:new URL('../../assets/textures/medical-vinyl.webp',import.meta.url).href,repeat:[5,3],roughness:.88,metalness:0}
+      ,officeCarpetBlue:{url:new URL('../../assets/textures/office-carpet-blue.webp',import.meta.url).href,repeat:[5,3],roughness:.98,metalness:0}
+      ,hotelCarpetTaupe:{url:new URL('../../assets/textures/hotel-carpet-taupe.webp',import.meta.url).href,repeat:[5,3],roughness:.97,metalness:0}
     };
   }
   get(name){

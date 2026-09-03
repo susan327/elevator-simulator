@@ -4,7 +4,7 @@ export class UIController {
   constructor(app){this.app=app;this.bind();this.buildDynamicFloors();this.buildDesignControls();this.updateDesignValues();this.setPreview(localStorage.getItem('elevator-preview-mode')||'auto');}
   el(id){return document.getElementById(id);}
   bind(){
-    const officePreset=this.el('officeBuildingPreset');if(officePreset)officePreset.onclick=()=>{if(this.app.inside||this.app.elevator.state!=='IDLE'){this.app.log('建物プリセットは、かごの外で待機中に変更できます');return;}this.app.config.applyBuildingPreset('office30');this.updateDesignValues();this.app.scheduleDesignUpdate('building');this.app.log('30Fオフィスビル設定を適用');};
+    const buildings=this.el('buildingPresets');if(buildings)buildings.onclick=e=>{const button=e.target.closest('[data-building]');if(!button)return;if(this.app.inside||!this.app.bank.isIdle()){this.app.log('建物テンプレートは、かごの外で全号機待機中に変更できます');return;}this.app.config.applyBuildingPreset(button.dataset.building);this.updateDesignValues();this.app.scheduleDesignUpdate('building');this.app.log(`${button.textContent.trim()}テンプレートを適用`);};
     this.el('panelToggle').onclick=()=>this.setPanel(!document.body.classList.contains('panel-open'));this.el('panelClose').onclick=()=>this.setPanel(false);this.el('panelBackdrop').onclick=()=>this.setPanel(false);
     this.el('portraitFloorToggle').onclick=()=>this.setPortraitSheet(this.el('portraitFloorSheet').hidden);this.el('portraitFloorClose').onclick=()=>this.setPortraitSheet(false);this.el('portraitOpenBtn').onclick=()=>this.app.openDoor();this.el('portraitCloseBtn').onclick=()=>this.app.closeDoor();
     this.el('portraitHallControls').onclick=e=>{const button=e.target.closest('[data-direction]');if(button)this.app.call(button.dataset.direction,button.closest('[data-elevator]')?.dataset.elevator||null);};
@@ -40,6 +40,7 @@ export class UIController {
   format(key,v){if(key==='floors')return `${v}階`;if(['maxSpeed'].includes(key))return `${v.toFixed(2)} m/s`;if(['acceleration','deceleration'].includes(key))return `${v.toFixed(2)} m/s²`;if(['accelJerk','decelJerk'].includes(key))return `${v.toFixed(2)} m/s³`;if(key==='landingSpeed')return `${v.toFixed(3)} m/s`;if(key==='landingDistance')return `${v.toFixed(2)} m`;return `${v.toFixed(2)} m`;}
   updateDesignValues(){
     const c=this.app.config;document.querySelectorAll('[data-key]').forEach(row=>{const key=row.dataset.key;row.querySelector('[data-value]').textContent=this.format(key,c[key]);});
+    document.querySelectorAll('#buildingPresets [data-building]').forEach(b=>b.classList.toggle('active',b.dataset.building===c.buildingPreset));
     for(const id of ['A','B']){const input=this.el(`servedFloors${id}Input`);if(input)input.value=c.unitFloorServices[id].expression;}
     document.querySelectorAll('#cabinPresets [data-preset],#quickCabinPresets [data-preset]').forEach(b=>b.classList.toggle('active',b.dataset.preset===c.cabinPreset));document.querySelectorAll('#motionPresets [data-preset],#quickMotionPresets [data-preset]').forEach(b=>b.classList.toggle('active',b.dataset.preset===c.motionPreset));
   }

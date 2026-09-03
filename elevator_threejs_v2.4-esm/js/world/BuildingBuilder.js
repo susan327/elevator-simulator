@@ -39,7 +39,7 @@ export class BuildingBuilder {
     leaf.position.set(leaf.userData.closedX,0,z);parent.add(leaf);return leaf;
   }
   floorProfile(f){
-    const signature=OfficeFloorCatalog.get(f);if(signature)return signature;
+    const signature=OfficeFloorCatalog.get(f,this.geometryConfig?.system?.buildingPreset);if(signature)return signature;
     const names=['','MAIN ENTRANCE','VISITOR RECEPTION','SALES','CUSTOMER SUCCESS','HUMAN RESOURCES','CONFERENCE CENTER','FINANCE','LEGAL','GENERAL AFFAIRS','TRAINING CENTER','SKY LOBBY','ENGINEERING','PRODUCT DESIGN','QUALITY LAB','IT OPERATIONS','SECURITY CENTER','DATA & AI','RESEARCH & DEVELOPMENT','MARKETING','PROJECT HUB','SKY LOBBY','GLOBAL BUSINESS','CORPORATE STRATEGY','CONSULTING','INNOVATION LAB','EXECUTIVE SUPPORT','BOARD OFFICE','EXECUTIVE OFFICE','PRESIDENT OFFICE','OBSERVATION LOUNGE'];
     let type='office',zone=f<=10?'LOW-RISE OFFICE':f<=20?'MID-RISE OFFICE':'HIGH-RISE OFFICE';
     if(f===1)type='lobby';else if(f===11||f===21)type='lounge';else if(f===6||f===10||f===16||f===20||f===25)type='meeting';else if(f===30)type='observation';else if(f>=27)type='executive';
@@ -105,7 +105,7 @@ export class BuildingBuilder {
   }
   buildFloor(f){
     const y=this.floorY(f),c=this.geometryConfig,lobby=new THREE.Group(),profile=this.floorProfile(f);lobby.position.y=y;this.group.add(lobby);this.floorGroups[f]=lobby;const {wall,trim}=profile,openingW=c.frameOuterWidth,openingH=c.frameOuterHeight,lobbyH=this.floorHeight,doorXs=this.shaftIds.map(id=>this.shaftCenters[id]);
-    const floorMaterial={1:'entranceStone',6:'conferenceCarpet',14:'designTerrazzo',27:'executiveOak'}[f];this.box(16.5,.22,8.8,profile.floor,0,-.11,5.85,{roughness:.92,materialName:floorMaterial},lobby);this.box(16.5,.22,8.8,profile.ceiling,0,lobbyH-.11,5.85,{roughness:.96},lobby);this.box(16.5,lobbyH,.24,wall,0,lobbyH/2,10.2,{roughness:.94},lobby);
+    const floorMaterial=profile.material||(f===1?'entranceStone':null);this.box(16.5,.22,8.8,profile.floor,0,-.11,5.85,{roughness:.92,materialName:floorMaterial},lobby);this.box(16.5,.22,8.8,profile.ceiling,0,lobbyH-.11,5.85,{roughness:.96},lobby);this.box(16.5,lobbyH,.24,wall,0,lobbyH/2,10.2,{roughness:.94},lobby);
     const facadeHalf=8.25,edges=[-facadeHalf,doorXs[0]-openingW/2,doorXs[0]+openingW/2,doorXs[1]-openingW/2,doorXs[1]+openingW/2,facadeHalf];for(const [a,b] of [[edges[0],edges[1]],[edges[2],edges[3]],[edges[4],edges[5]]])this.box(b-a,lobbyH,.18,wall,(a+b)/2,lobbyH/2,1.48,{roughness:.92},lobby);
     for(const doorX of doorXs){this.box(openingW,Math.max(.15,lobbyH-openingH),.18,wall,doorX,openingH+(lobbyH-openingH)/2,1.48,{roughness:.92},lobby);this.box(c.frameSide,openingH,.22,trim,doorX-openingW/2+c.frameSide/2,openingH/2,1.59,{roughness:.55,metalness:.14},lobby);this.box(c.frameSide,openingH,.22,trim,doorX+openingW/2-c.frameSide/2,openingH/2,1.59,{roughness:.55,metalness:.14},lobby);this.box(openingW,c.frameTop,.22,trim,doorX,openingH-c.frameTop/2,1.59,{roughness:.55,metalness:.14},lobby);this.box(openingW-.08,.10,.28,0x454442,doorX,-.05,1.54,{roughness:.75,metalness:.12},lobby);}
     for(let gx=-5.4;gx<=5.4;gx+=1.35)this.box(.025,.018,8.2,0x8d857b,gx,.015,5.9,{roughness:1},lobby);for(let gz=2.0;gz<=9.6;gz+=1.25)this.box(12.8,.018,.025,0x8d857b,0,.017,gz,{roughness:1},lobby);
