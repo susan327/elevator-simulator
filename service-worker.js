@@ -1,5 +1,5 @@
-const CACHE_NAME='elevator-simulator-v38';
-const CORE_ASSETS=['./','./index.html','./app/','./app/index.html','./floor-directory.html','./floor-directory.css','./floor-directory-controls.css','./floor-directory.js','./elevator_threejs_v2.4-esm/js/config/BuildingTemplateCatalog.js','./manifest.webmanifest','./pwa-icon.svg','./motor-sound-generator.html','./motor-sound-generator.js','./motor-sound-preset.json'];
+const CACHE_NAME='elevator-simulator-v39';
+const CORE_ASSETS=['./','./index.html','./app/','./app/index.html','./floor-directory.html','./floor-directory.css','./floor-directory-controls.css','./floor-directory.js','./elevator_threejs_v2.4-esm/js/config/BuildingTemplateCatalog.js','./elevator_threejs_v2.4-esm/js/config/FloorLayoutCatalog.js','./manifest.webmanifest','./pwa-icon.svg','./motor-sound-generator.html','./motor-sound-generator.js','./motor-sound-preset.json'];
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE_NAME).then(cache=>cache.addAll(CORE_ASSETS)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key!==CACHE_NAME).map(key=>caches.delete(key)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',event=>{

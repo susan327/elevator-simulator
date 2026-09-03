@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { OfficeFloorCatalog } from './OfficeFloorCatalog.js';
 import { FloorSceneBuilder } from './FloorSceneBuilder.js';
 import { MaterialLibrary } from './MaterialLibrary.js';
+import { FloorLayoutCatalog } from '../config/FloorLayoutCatalog.js';
 
 export class BuildingBuilder {
   constructor(scene,{floors=20,floorHeight=3.6,geometryConfig=null,floorService=null}={}){this.scene=scene;this.floors=floors;this.floorHeight=floorHeight;this.geometryConfig=geometryConfig;this.floorService=floorService;this.shaftIds=['A','B'];this.elevatorPositions={A:NaN,B:NaN};this.materialLibrary=new MaterialLibrary();this.floorSceneBuilder=new FloorSceneBuilder(this);this.group=new THREE.Group();scene.add(this.group);this.hallDoors={A:[],B:[]};this.shaftBacks={A:[],B:[]};this.hallButtons={A:[],B:[]};this.hallIndicators={A:[],B:[]};this.floorGroups=[];this.interactiveObjects=[];this.build();this.setVisibleFloor(1);}
@@ -97,6 +98,7 @@ export class BuildingBuilder {
     }
     lobby.userData.floorVisualType=type;lobby.userData.floorZone=zone;
   }
+  buildInteriorLayout(lobby,f,profile,lobbyH){const layout=FloorLayoutCatalog.get(this.geometryConfig?.system?.buildingPreset||'custom',f,profile);lobby.userData.floorLayout=layout;for(const blocker of layout.blockers){const b=blocker.bounds,w=b.maxX-b.minX,d=b.maxZ-b.minZ;this.box(w,2.28,d,profile.wall,(b.minX+b.maxX)/2,1.14,(b.minZ+b.maxZ)/2,{roughness:.91},lobby);}for(const portal of layout.portals.filter(x=>x.kind==='door')){this.box(1.06,.10,.16,profile.trim,portal.x,2.24,portal.z,{metalness:.12,roughness:.58},lobby);this.sign(portal.target==='left-room'?'01':'02',.42,.18,lobby,portal.x,2.05,portal.z-.09,'#182027','#f3d99b');}this.box(10.7,.035,.08,profile.trim,0,.025,4.35,{roughness:.72},lobby);this.box(10.7,.035,.08,profile.accent,0,.027,7.12,{roughness:.72},lobby);}
   build(){
     const total=this.floorHeight*this.floors,c=this.geometryConfig,shaftW=Math.max(3.0,c.carWidth+.95),shaftD=Math.max(2.6,c.carDepth+.85),half=shaftW/2,spacing=shaftW+.42;
     this.shaftWidth=shaftW;this.shaftCenters={A:-spacing/2,B:spacing/2};
@@ -110,6 +112,7 @@ export class BuildingBuilder {
     for(const doorX of doorXs){this.box(openingW,Math.max(.15,lobbyH-openingH),.18,wall,doorX,openingH+(lobbyH-openingH)/2,1.48,{roughness:.92},lobby);this.box(c.frameSide,openingH,.22,trim,doorX-openingW/2+c.frameSide/2,openingH/2,1.59,{roughness:.55,metalness:.14},lobby);this.box(c.frameSide,openingH,.22,trim,doorX+openingW/2-c.frameSide/2,openingH/2,1.59,{roughness:.55,metalness:.14},lobby);this.box(openingW,c.frameTop,.22,trim,doorX,openingH-c.frameTop/2,1.59,{roughness:.55,metalness:.14},lobby);this.box(openingW-.08,.10,.28,0x454442,doorX,-.05,1.54,{roughness:.75,metalness:.12},lobby);}
     for(let gx=-5.4;gx<=5.4;gx+=1.35)this.box(.025,.018,8.2,0x8d857b,gx,.015,5.9,{roughness:1},lobby);for(let gz=2.0;gz<=9.6;gz+=1.25)this.box(12.8,.018,.025,0x8d857b,0,.017,gz,{roughness:1},lobby);
     this.buildFloorScenery(lobby,f,lobbyH);
+    this.buildInteriorLayout(lobby,f,profile,lobbyH);
     this.box(.58,1.05,.58,0x493327,-3.75,.52,6.7,{roughness:.9},lobby);this.box(.85,.64,.85,0x3c6038,-3.75,1.23,6.7,{roughness:.82},lobby);
     for(let i=-2;i<=2;i++)this.box(.42,.045,.42,0xf4e1c5,i*2.25,lobbyH-.23,5.1,{emissive:0x7a4b18,emissiveIntensity:1.35},lobby);
     // 乗場扉は壁内へ収納し、正面から戸袋の柱が見えない構成にする。
