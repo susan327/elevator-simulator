@@ -18,6 +18,7 @@ import { PassengerSimulationConfig } from './simulation/PassengerSimulationConfi
 import { PassengerRenderer } from './simulation/PassengerRenderer.js';
 import { PassengerManager } from './simulation/PassengerManager.js';
 import { AutomaticOperationController } from './simulation/AutomaticOperationController.js';
+import { PwaManager } from './pwa/PwaManager.js';
 
 class ElevatorApp {
   constructor(){
@@ -121,4 +122,4 @@ class ElevatorApp {
   }
 }
 addEventListener('DOMContentLoaded',()=>new ElevatorApp());
-if('serviceWorker'in navigator)addEventListener('load',()=>navigator.serviceWorker.register('../service-worker.js'));
+new PwaManager({serviceWorkerUrl:'../service-worker.js'});
