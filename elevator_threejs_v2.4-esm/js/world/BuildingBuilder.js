@@ -135,7 +135,7 @@ export class BuildingBuilder {
     const data={};dirs.forEach((dir,i)=>{const y=dirs.length===2?1.43-i*.34:1.25;data[dir]=this.makeInteractiveButton(lobby,{x:panelX,y,z:1.69,label:dir==='up'?'▲':'▼',type:'hallCall',floor:f,direction:dir,size:.14});data[dir].userData.interaction.elevatorId=elevatorId;});
     this.hallButtons[elevatorId][f]=data;
   }
-  setHallCallLight(floor,direction,on,arriving=false,elevatorId=null){for(const id of elevatorId?[elevatorId]:this.shaftIds){const b=this.hallButtons[id]?.[floor]?.[direction];if(!b)continue;b.material.emissive.setHex(on?(arriving?0xffb000:0x8a3c00):b.userData.baseEmissive);b.material.emissiveIntensity=on?(arriving?2.5:1.7):.22;}}
+  setHallCallLight(floor,direction,on,arriving=false,elevatorId=null){for(const id of elevatorId?[elevatorId]:this.shaftIds){const b=this.hallButtons[id]?.[floor]?.[direction];if(!b)continue;b.material.emissive.setHex(on?0x8a3c00:b.userData.baseEmissive);b.material.emissiveIntensity=on?1.7:.22;}}
   setVisibleFloor(floor,radius=0){
     const active=Math.max(1,Math.min(this.floors,Math.round(floor))),range=Math.max(0,Math.round(radius)),key=`${active}:${range}`;
     if(this.visibleFloorRange===key)return;this.visibleFloorRange=key;

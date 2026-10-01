@@ -68,14 +68,14 @@ class ElevatorApp {
       for(const direction of ['up','down']){
         if(this.config.hasDistinctServiceZones()){
           for(const unit of this.bank.units.values()){
-            const e=unit.controller,queued=e.target===f||e.calls.queue.some(x=>x.floor===f&&x.direction===direction),sameFloor=e.state==='SAME_FLOOR_RESPONSE'&&Math.round(e.position)===f&&e.sameFloorDirection===(direction==='up'?1:-1),arriving=e.arrivalFloor===f&&now<e.arrivalFlashUntil&&e.arrivalDirection===(direction==='up'?1:-1),active=queued||sameFloor||arriving;
+            const e=unit.controller,queued=(e.target===f&&e.currentRequestDirection===direction)||e.calls.queue.some(x=>x.floor===f&&x.direction===direction),sameFloor=e.state==='SAME_FLOOR_RESPONSE'&&Math.round(e.position)===f&&e.sameFloorDirection===(direction==='up'?1:-1),arriving=e.arrivalFloor===f&&now<e.arrivalFlashUntil&&e.arrivalDirection===(direction==='up'?1:-1),active=queued||sameFloor||arriving;
             this.building.setHallCallLight(f,direction,arriving?blinkOn:active,arriving,unit.id);
           }
           continue;
         }
         const assignedId=this.dispatch.assignedTo(f,direction);
         const assigned=assignedId?this.bank.get(assignedId):null,assignedElevator=assigned?.controller;
-        const queued=!!assignedElevator&&(assignedElevator.target===f||assignedElevator.calls.queue.some(x=>x.floor===f&&x.direction===direction));
+        const queued=!!assignedElevator&&((assignedElevator.target===f&&assignedElevator.currentRequestDirection===direction)||assignedElevator.calls.queue.some(x=>x.floor===f&&x.direction===direction));
         const sameFloor=!!assignedElevator&&assignedElevator.state==='SAME_FLOOR_RESPONSE'&&Math.round(assignedElevator.position)===f&&assignedElevator.sameFloorDirection===(direction==='up'?1:-1);
         const arrivalActive=!!assignedElevator&&assignedElevator.arrivalFloor===f&&now<assignedElevator.arrivalFlashUntil&&assignedElevator.arrivalDirection===(direction==='up'?1:-1);
         const sharedActive=queued||sameFloor||arrivalActive;

@@ -14,10 +14,15 @@ export class ElevatorController {
     this.landingSpeed=c.landingSpeed??.03;this.landingDistance=c.landingDistance??.4;
     if(this.planner)this.planner.applyConfig(c);
   }
-  request(floor,direction,options={}){
+  request(floor,direction='car',options={}){
     if(floor<1||floor>this.building.floors)return;if(this.calls.floorService&&!this.calls.floorService.isServed(floor)){this.log(`${floor}Fはこの号機の通過階です`);return;}
     if(Math.abs(this.position-floor)<.002&&this.target===null&&Math.abs(this.velocity)<.001){
-      if(this.doors.isOpen()||this.doors.isBoardable()||this.state==='SAME_FLOOR_RESPONSE')return;
+      if(['SAME_FLOOR_RESPONSE','ARRIVAL_WAIT','DOOR'].includes(this.state)||!this.doors.isClosed()){
+        const respondingDirection=this.announcedArrivalDirection||this.resolveDepartureDirection(floor,this.currentRequestDirection);
+        // 応答中の逆方向は次便へ回し、現在の開閉動作は中断しない。
+        if(direction!=='car'&&this.resolveDepartureDirection(floor,direction)!==respondingDirection)this.calls.request(floor,direction);
+        return;
+      }
       this.startSameFloorResponse(floor,direction);return;
     }
     this.calls.request(floor,direction);if(options.closeDoors!==false&&!this.doors.isClosed())this.doors.close();
@@ -32,10 +37,18 @@ export class ElevatorController {
     const numeric=Number(requestedDirection);
     return Number.isFinite(numeric)&&numeric!==0?Math.sign(numeric):0;
   }
+  resolveArrivalDirection(){
+    // ホール呼びでは、次便の方向ではなく今回応答中の呼び方向を案内する。
+    if(this.currentRequestDirection==='up')return 1;
+    if(this.currentRequestDirection==='down')return -1;
+    return this.resolveDepartureDirection(this.target,this.calls.nextDirection(this.target,this.planDirection))||this.planDirection||1;
+  }
   startSameFloorResponse(floor,direction){
     this.position=Number(floor);this.velocity=0;this.acceleration=0;this.target=null;this.plan=null;this.planElapsed=0;
     this.sameFloorTimer=0;this.sameFloorArrivalPlayed=false;
     this.sameFloorDirection=this.resolveDepartureDirection(floor,direction)||1;
+    this.currentRequestDirection=direction;this.announcedArrivalDirection=this.sameFloorDirection;
+    this.calls.cancel(this.position,direction);this.calls.cancel(this.position,'car');
     this.state='SAME_FLOOR_RESPONSE';this.boardingLogged=false;this.sync();
     this.log(`${floor}F同一階応答：0.8秒後に${this.sameFloorDirection>0?'上':'下'}方向到着音＋開扉`);
   }
@@ -43,7 +56,8 @@ export class ElevatorController {
     this.position=Number(floor);this.velocity=0;this.acceleration=0;this.target=null;
     this.plan=null;this.planElapsed=0;this.state='ARRIVAL_WAIT';this.arrivalWait=1.5;this.boardingLogged=false;
     this.startArrivalFlash(this.position,this.announcedArrivalDirection||this.resolveDepartureDirection(this.position,this.currentRequestDirection)||this.planDirection||1);
-    this.calls.clearFloor(this.position);this.sync();this.log(`${this.position}Fに滑らかに定位置停止`);
+    // 到着した方向だけを処理済みにする。反対方向の呼びは次便として保持する。
+    this.calls.cancel(this.position,this.currentRequestDirection);this.calls.cancel(this.position,'car');this.sync();this.log(`${this.position}Fに滑らかに定位置停止`);
   }
   startArrivalFlash(floor,direction){this.arrivalFloor=Number(floor);this.arrivalDirection=Math.sign(direction)||1;this.arrivalFlashUntil=performance.now()+3000;}
   playArrival(direction,floor){if(this.shouldPlayArrival(floor))this.audio?.playArrival(direction);}
@@ -88,6 +102,7 @@ export class ElevatorController {
     if(!this.doors.isClosed()){this.state='DOOR';this.sync();return;}
     if(this.target===null){
       const request=this.calls.next(this.position,this.serviceDirection);
+      if(request&&Math.abs(request.floor-this.position)<.002){this.currentRequestDirection=request.direction;this.startSameFloorResponse(request.floor,request.direction);return;}
       this.target=request?.floor??null;
       this.currentRequestDirection=request?.direction??'car';
       if(this.target!==null){this.serviceDirection=Math.sign(this.target-this.position)||this.serviceDirection;this.createPlan(this.target);}
@@ -100,9 +115,7 @@ export class ElevatorController {
     this.planElapsed=Math.min(this.plan.totalTime,this.planElapsed+dt);
     const secondsUntilDoorOpen=(this.plan.totalTime-this.planElapsed)+1.5;
     if(!this.arrivalSoundPlayed&&secondsUntilDoorOpen<=this.arrivalLeadSeconds){
-      let nextDirection=this.calls.nextDirection(this.target,this.currentRequestDirection);
-      if(nextDirection===0)nextDirection=this.planDirection;
-      nextDirection=this.resolveDepartureDirection(this.target,nextDirection)||this.planDirection||1;
+      const nextDirection=this.resolveArrivalDirection();
       this.playArrival(nextDirection,this.target);this.arrivalSoundPlayed=true;this.announcedArrivalDirection=nextDirection;
       this.log(`到着予告音：このあと${nextDirection>0?'上':'下'}方向（開扉約${secondsUntilDoorOpen.toFixed(1)}秒前）`);
     }
