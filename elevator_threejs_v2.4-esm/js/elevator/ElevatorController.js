@@ -62,7 +62,11 @@ export class ElevatorController {
   startArrivalFlash(floor,direction){this.arrivalFloor=Number(floor);this.arrivalDirection=Math.sign(direction)||1;this.arrivalFlashUntil=performance.now()+3000;}
   playArrival(direction,floor){if(this.shouldPlayArrival(floor))this.audio?.playArrival(direction);}
   extendDoorHold(seconds=this.doorHoldDuration){this.doorHoldTimer=Math.max(this.doorHoldTimer,seconds);}
-  commandOpen(){if(Math.abs(this.velocity)>.035)return false;this.doors.open(Math.round(this.position));this.state='DOOR';this.boardingLogged=false;this.extendDoorHold();return true;}
+  commandOpen(){
+    // 発進直後や着床直前も、運動計画が完了するまでは開扉しない。
+    if(this.target!==null||this.plan!==null||Math.abs(this.velocity)>.035)return false;
+    this.doors.open(Math.round(this.position));this.state='DOOR';this.boardingLogged=false;this.extendDoorHold();return true;
+  }
   commandClose(){this.doorHoldTimer=0;this.doors.close();this.state='DOOR';return true;}
   createPlan(target){
     this.planStartFloor=this.position;this.planDirection=Math.sign(target-this.position);

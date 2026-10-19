@@ -52,6 +52,55 @@ test('arrival preserves opposite hall call while clearing car call',()=>{
   assert.deepEqual(calls.queue,[{floor:3,direction:'down'}]);
 });
 
+for(const direction of ['up','down']){
+  for(const phase of ['ACCELERATING','CRUISING','DECELERATING','LANDING']){
+    test(`open command is rejected during ${direction} ${phase} without interrupting travel`,()=>{
+      const {controller:e,doors}=elevator();
+      if(direction==='down'){
+        e.request(9,'car');until(e,()=>e.state==='ARRIVAL_WAIT');until(e,()=>e.state==='IDLE');
+      }
+      const destination=direction==='up'?9:1;
+      e.request(destination,'car');
+      until(e,()=>e.state===phase&&(phase==='ACCELERATING'||phase==='LANDING'?e.velocity>.005&&e.velocity<.035:true));
+      const before={state:e.state,position:e.position,velocity:e.velocity,target:e.target,plan:e.plan,elapsed:e.planElapsed};
+      assert.equal(e.commandOpen(),false);
+      assert.equal(doors.target,0);assert.equal(doors.progress,0);
+      assert.deepEqual({state:e.state,position:e.position,velocity:e.velocity,target:e.target,plan:e.plan,elapsed:e.planElapsed},before);
+      until(e,()=>e.state==='ARRIVAL_WAIT');
+      assert.equal(e.position,destination);assert.equal(e.velocity,0);assert.equal(e.acceleration,0);
+      assert.equal(e.commandOpen(),true);
+      until(e,()=>doors.isOpen());
+    });
+  }
+}
+test('open command works while idle and after arrival',()=>{
+  const {controller:e,doors}=elevator();
+  assert.equal(e.commandOpen(),true);until(e,()=>doors.isOpen());
+  e.commandClose();until(e,()=>e.state==='IDLE');
+  e.request(3,'car');until(e,()=>e.state==='ARRIVAL_WAIT');
+  assert.equal(e.commandOpen(),true);until(e,()=>doors.isOpen());
+  assert.equal(e.position,3);
+});
+test('open command reverses closing doors at a stopped floor',()=>{
+  const {controller:e,doors}=elevator();
+  e.commandOpen();until(e,()=>doors.isOpen());e.commandClose();
+  until(e,()=>doors.progress>.2&&doors.progress<.7);
+  const progress=doors.progress;
+  assert.equal(e.commandOpen(),true);assert.equal(doors.target,1);
+  e.update(.02);assert.ok(doors.progress>progress);
+  until(e,()=>doors.isOpen());assert.equal(e.position,1);
+});
+test('open command extends the hold and doors still close automatically',()=>{
+  const {controller:e,doors}=elevator();
+  e.commandOpen();until(e,()=>doors.isOpen()&&e.boardingLogged);
+  until(e,()=>e.doorHoldTimer<1);
+  assert.equal(e.commandOpen(),true);
+  for(let i=0;i<100;i++)e.update(.02);
+  assert.equal(doors.target,1);assert.ok(doors.isOpen());
+  until(e,()=>doors.target===0);until(e,()=>e.state==='IDLE');
+  assert.ok(doors.isClosed());
+});
+
 const workerSource=readFileSync(new URL('../../service-worker.js',import.meta.url),'utf8');
 for(const destination of ['script','image']){
   test(`worker caches ${destination} after response consumption and serves it offline`,async()=>{
